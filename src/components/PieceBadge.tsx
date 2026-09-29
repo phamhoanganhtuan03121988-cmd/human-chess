@@ -19,7 +19,7 @@ interface PieceBadgeProps extends PieceInteraction {
  * top-center is the intersection, and the badge is offset down from it.
  * Hovering shows a tooltip with the Vietnamese name and character.
  */
-export function PieceBadge({ side, type, x, y, hovered, selected, onHoverChange, onSelect }: PieceBadgeProps) {
+export function PieceBadge({ side, type, x, y, hovered, selected, capturable, onHoverChange, onSelect }: PieceBadgeProps) {
   const label = getPieceLabel(side, type);
   const size = `max(${boardUnits(BADGE_SIZE)}, ${BADGE_MIN_PX}px)`;
   // Bottom-rank tooltips open upward so they stay on the board.
@@ -29,6 +29,7 @@ export function PieceBadge({ side, type, x, y, hovered, selected, onHoverChange,
     `piece-badge--${side}`,
     hovered && 'is-hovered',
     selected && 'is-selected',
+    capturable && 'is-capturable',
   ];
 
   return (
@@ -47,7 +48,10 @@ export function PieceBadge({ side, type, x, y, hovered, selected, onHoverChange,
           onPointerLeave={() => onHoverChange?.(false)}
           onFocus={() => onHoverChange?.(true)}
           onBlur={() => onHoverChange?.(false)}
-          onClick={onSelect}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect?.();
+          }}
         >
           {getPieceGlyph(side, type)}
         </button>

@@ -1,23 +1,33 @@
-import { useState } from 'react';
-import { INITIAL_POSITION } from './board/initialPosition.ts';
-import { Board } from './components/Board.tsx';
-import { PieceLayer } from './components/PieceLayer.tsx';
+import { useEffect, useReducer, useState } from 'react';
+import { GameBoard } from './components/GameBoard.tsx';
+import { StatusPanel } from './components/StatusPanel.tsx';
 import { isBoardDebugEnabled } from './config/debug.ts';
-import { PIECE_HEADROOM } from './config/pieceSprites.ts';
+import { createUiState, getStatusView, uiReducer } from './game/controller.ts';
 
 export function App() {
   const [debug, setDebug] = useState(isBoardDebugEnabled);
+  const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState());
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dispatch({ type: 'clearSelection' });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <main className="app">
-      <div className="dev-toolbar">
-        <label>
+      <div className="toolbar">
+        <StatusPanel status={getStatusView(ui.game)} />
+        <button type="button" className="toolbar__button" onClick={() => dispatch({ type: 'newGame' })}>
+          New game
+        </button>
+        <label className="toolbar__debug">
           <input type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} /> Board debug
         </label>
       </div>
-      <Board debug={debug} headroom={PIECE_HEADROOM}>
-        <PieceLayer placements={INITIAL_POSITION} debug={debug} />
-      </Board>
+      <GameBoard ui={ui} dispatch={dispatch} debug={debug} />
     </main>
   );
 }

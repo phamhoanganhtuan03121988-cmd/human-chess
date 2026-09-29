@@ -32,7 +32,48 @@ body { background: var(--page-bg); color: #f5f0e6; }
   padding: 8px 16px;
 }
 
-.dev-toolbar { display: flex; gap: 16px; font-size: 14px; }
+/* Toolbar: status panel + controls, kept to one compact row (see 56px in .board-frame). */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 32px;
+  font-size: 14px;
+}
+.toolbar__button {
+  font: inherit;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--gold);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+}
+.toolbar__button:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* Status panel */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.06);
+}
+.status--red { color: #ff8a80; }
+.status--blue { color: #8ab4ff; }
+.status__check {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff;
+  font-size: 12px;
+}
+.status__detail { font-weight: 500; font-size: 12px; opacity: 0.85; letter-spacing: 0.02em; }
+.status--over { background: rgba(246, 227, 161, 0.12); }
 
 /*
  * Board sizing: the frame is the 9:10 board (BOARD_WIDTH : BOARD_HEIGHT in
@@ -58,11 +99,17 @@ body { background: var(--page-bg); color: #f5f0e6; }
 
 .board__svg, .board__layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .board__layer { pointer-events: none; }
-/* Layering: board SVG (lines, debug grid) < ground rings < pieces < badges < debug anchors. */
+/*
+ * Layering: board SVG (lines, debug grid) < ground (rings, last move) <
+ * pieces < badges < legal-move markers < debug anchors.
+ */
 .board__layer--ground { z-index: 1; }
 .board__layer--pieces { z-index: 2; }
 .board__layer--badges { z-index: 3; }
-.board__layer--debug { z-index: 4; }
+.board__layer--markers { z-index: 4; }
+.board__layer--debug { z-index: 5; }
+.board-frame--locked .piece__img,
+.board-frame--locked .piece-badge { cursor: default; }
 
 .board__line { stroke: var(--board-line); stroke-width: 0.025; stroke-linecap: square; }
 .board__frame { fill: none; stroke: var(--board-line); stroke-width: 0.05; }
@@ -102,18 +149,54 @@ body { background: var(--page-bg); color: #f5f0e6; }
 .piece.is-selected .piece__img--red { filter: drop-shadow(0 0 0.5cqw rgba(255, 196, 120, 0.95)) brightness(1.06); }
 .piece.is-selected .piece__img--blue { filter: drop-shadow(0 0 0.5cqw rgba(150, 200, 255, 0.95)) brightness(1.06); }
 
-/* Ground ring under the feet (hover / selected). */
-.piece-ring {
-  border-radius: 50%;
-  transition: opacity 120ms ease;
-}
-.piece-ring.is-hovered { border: 0.25cqw solid rgba(122, 90, 28, 0.45); }
-.piece-ring.is-selected {
+/* Ground rings under the feet, centered on the intersection. */
+.piece-ring { border-radius: 50%; }
+.piece-ring--hover { border: 0.25cqw solid rgba(122, 90, 28, 0.45); }
+.piece-ring--selected {
   border: 0.3cqw solid var(--gold-hi);
   box-shadow: 0 0 1.2cqw 0.2cqw rgba(246, 227, 161, 0.85), inset 0 0 0.8cqw rgba(246, 227, 161, 0.6);
 }
-.piece-ring--red.is-selected { background: radial-gradient(closest-side, rgba(179, 38, 30, 0.28), transparent); }
-.piece-ring--blue.is-selected { background: radial-gradient(closest-side, rgba(30, 79, 163, 0.28), transparent); }
+.piece-ring--selected.piece-ring--red { background: radial-gradient(closest-side, rgba(179, 38, 30, 0.28), transparent); }
+.piece-ring--selected.piece-ring--blue { background: radial-gradient(closest-side, rgba(30, 79, 163, 0.28), transparent); }
+/* Legal capture: dashed crimson ring around the target. */
+.piece-ring--capture {
+  border: 0.32cqw dashed #c0392b;
+  box-shadow: 0 0 0.8cqw rgba(192, 57, 43, 0.55);
+  background: radial-gradient(closest-side, rgba(192, 57, 43, 0.18), transparent);
+}
+/* General in check: soft red glow. */
+.piece-ring--check {
+  background: radial-gradient(closest-side, rgba(220, 40, 30, 0.55), rgba(220, 40, 30, 0.15) 70%, transparent);
+  box-shadow: 0 0 1.4cqw 0.3cqw rgba(220, 40, 30, 0.45);
+}
+/* Last move: faint gold ring at the destination, hollow dot at the origin. */
+.piece-ring--last-move { border: 0.22cqw solid rgba(201, 162, 74, 0.8); background: rgba(246, 227, 161, 0.2); }
+.last-move-from {
+  border-radius: 50%;
+  border: 0.22cqw solid rgba(201, 162, 74, 0.85);
+  background: rgba(246, 227, 161, 0.25);
+}
+
+/* Legal destination marker: transparent hit area with a small dot on the intersection. */
+.move-marker {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.move-marker__dot {
+  border-radius: 50%;
+  background: rgba(38, 110, 60, 0.75);
+  box-shadow: 0 0 0 0.2cqw rgba(255, 255, 255, 0.7);
+  transition: transform 100ms ease;
+}
+.move-marker:hover .move-marker__dot { transform: scale(1.3); }
+.move-marker:focus { outline: none; }
+.move-marker:focus-visible .move-marker__dot { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
 /* Identification badge: wooden disc with a gilded rim, glyph in team color. */
 .piece-badge__slot { position: relative; display: flex; flex-direction: column; align-items: center; }
@@ -139,6 +222,11 @@ body { background: var(--page-bg); color: #f5f0e6; }
 .piece-badge--red { color: var(--red); }
 .piece-badge--blue { color: var(--blue); }
 .piece-badge.is-hovered { transform: translateY(-0.15cqw) scale(1.08); }
+.piece-badge.is-capturable {
+  box-shadow:
+    0 0 0 max(0.2cqw, 1.5px) #c0392b,
+    0 0 0.8cqw rgba(192, 57, 43, 0.7);
+}
 .piece-badge.is-selected {
   border-color: var(--gold-hi);
   box-shadow:

@@ -29,6 +29,10 @@ interface BoardProps {
   headroom?: number;
   /** Layers positioned on intersections (see BoardAnchor / PieceLayer). */
   children?: ReactNode;
+  /** Click on the board itself (not on a piece or marker). */
+  onBackgroundClick?: () => void;
+  /** Whether the board accepts moves (false once the game is over). */
+  interactive?: boolean;
 }
 
 /**
@@ -36,7 +40,7 @@ interface BoardProps {
  * board-unit coordinate space from layout.ts, so every intersection is at
  * getBoardPoint(x, y) regardless of rendered size.
  */
-export function Board({ debug = false, headroom = 0, children }: BoardProps) {
+export function Board({ debug = false, headroom = 0, children, onBackgroundClick, interactive = true }: BoardProps) {
   const frameHeight = BOARD_HEIGHT + headroom;
   const frameStyle = {
     aspectRatio: `${BOARD_WIDTH} / ${frameHeight}`,
@@ -44,7 +48,11 @@ export function Board({ debug = false, headroom = 0, children }: BoardProps) {
   } as CSSProperties;
 
   return (
-    <div className="board-frame" style={frameStyle}>
+    <div
+      className={interactive ? 'board-frame' : 'board-frame board-frame--locked'}
+      style={frameStyle}
+      onClick={onBackgroundClick}
+    >
       <div className="board" data-testid="board">
         <svg
           className="board__svg"

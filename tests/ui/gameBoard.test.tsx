@@ -1,0 +1,208 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useReducer } from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { App } from '../../src/App.tsx';
+import { getIntersectionPosition } from '../../src/board/layout.ts';
+import { GameBoard } from '../../src/components/GameBoard.tsx';
+import { StatusPanel } from '../../src/components/StatusPanel.tsx';
+import type { GameState } from '../../src/engine/index.ts';
+import { createUiState, getStatusView, uiReducer } from '../../src/game/controller.ts';
+import { position } from '../engine/helpers.ts';
+
+afterEach(cleanup);
+
+function Harness({ game }: { game: GameState }) {
+  const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState(game));
+  return (
+    <>
+      <StatusPanel status={getStatusView(ui.game)} />
+      <GameBoard ui={ui} dispatch={dispatch} />
+    </>
+  );
+}
+
+const pieceImg = (x: number, y: number) =>
+  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+const markers = () => screen.queryAllByTestId('move-marker');
+const status = () => screen.getByTestId('status').textContent;
+
+describe('GameBoard UI', () => {
+  it('renders 32 pieces, each with its own side/type asset', () => {
+    render(<App />);
+    const imgs = screen.getAllByTestId('piece') as HTMLImageElement[];
+    expect(imgs).toHaveLength(32);
+    for (const img of imgs) {
+      expect(new URL(img.src).pathname).toBe(`/assets/pieces/${img.dataset.side}/${img.dataset.type}.png`);
+    }
+    expect(screen.getAllByTestId('piece-badge')).toHaveLength(32);
+  });
+
+  it('shows RED TURN at the start', () => {
+    render(<App />);
+    expect(status()).toBe('RED TURN');
+  });
+
+  it('clicking a red piece selects it and shows its legal move markers', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(4, 6)!);
+    expect(screen.getByTestId('ring-selected')).toBeTruthy();
+    expect(markers().map((m) => `${m.dataset.x},${m.dataset.y}`)).toEqual(['4,5']);
+  });
+
+  it('clicking a blue piece on red’s turn does not select it', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(1, 0)!);
+    expect(screen.queryByTestId('ring-selected')).toBeNull();
+    expect(markers()).toHaveLength(0);
+  });
+
+  it('clicking a legal marker moves the piece, switches turn and marks the last move', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(4, 6)!);
+    fireEvent.click(markers()[0]!);
+    expect(pieceImg(4, 6)).toBeNull();
+    expect(pieceImg(4, 5)?.dataset).toMatchObject({ side: 'red', type: 'pawn' });
+    expect(status()).toBe('BLUE TURN');
+    expect(markers()).toHaveLength(0);
+    const from = screen.getByTestId('last-move-from');
+    const to = screen.getByTestId('ring-last-move');
+    expect([from.dataset.x, from.dataset.y, to.dataset.x, to.dataset.y]).toEqual(['4', '6', '4', '5']);
+  });
+
+  it('an illegal click (empty non-destination) does not move and clears selection', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(4, 6)!);
+    fireEvent.click(document.querySelector('.board-frame')!); // board background
+    expect(pieceImg(4, 6)).not.toBeNull();
+    expect(markers()).toHaveLength(0);
+    expect(status()).toBe('RED TURN');
+  });
+
+  it('marks captures with a ring and removes the captured piece', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(1, 7)!); // red cannon
+    const captureRings = screen.getAllByTestId('ring-capture');
+    expect(captureRings.map((r) => `${r.dataset.x},${r.dataset.y}`)).toEqual(['1,0']);
+    expect(markers().some((m) => m.dataset.x === '1' && m.dataset.y === '0')).toBe(false);
+    fireEvent.click(pieceImg(1, 0)!); // click the blue knight to capture it
+    expect(pieceImg(1, 0)?.dataset).toMatchObject({ side: 'red', type: 'cannon' });
+    expect(screen.getAllByTestId('piece')).toHaveLength(31);
+  });
+
+  it('clicking the selected piece again clears the selection', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(4, 6)!);
+    fireEvent.click(pieceImg(4, 6)!);
+    expect(screen.queryByTestId('ring-selected')).toBeNull();
+    expect(markers()).toHaveLength(0);
+  });
+
+  it('Escape clears the selection', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(4, 6)!);
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(screen.queryByTestId('ring-selected')).toBeNull();
+    expect(markers()).toHaveLength(0);
+  });
+
+  it('centers every marker on its intersection with resolution-independent positions', () => {
+    render(<App />);
+    fireEvent.click(pieceImg(1, 9)!); // red knight
+    const ms = markers();
+    expect(ms).toHaveLength(2);
+    for (const m of ms) {
+      const anchor = m.closest<HTMLElement>('.board-anchor')!;
+      const { left, top } = getIntersectionPosition(Number(m.dataset.x), Number(m.dataset.y));
+      expect(anchor.style.left).toBe(`${left}%`);
+      expect(anchor.style.top).toBe(`${top}%`);
+      expect(anchor.style.transform).toBe('translate(-50%, -50%)');
+    }
+  });
+
+  it('shows CHECK and a glow on the checked general', () => {
+    render(
+      <Harness
+        game={position(`
+          ....k....
+          .........
+          .........
+          .........
+          .........
+          R........
+          .........
+          .........
+          .........
+          ...K.....
+        `)}
+      />,
+    );
+    fireEvent.click(pieceImg(0, 5)!);
+    fireEvent.click(markers().find((m) => m.dataset.x === '4' && m.dataset.y === '5')!);
+    expect(status()).toBe('BLUE TURNCHECK');
+    const ring = screen.getByTestId('ring-check');
+    expect([ring.dataset.x, ring.dataset.y]).toEqual(['4', '0']);
+  });
+
+  it('checkmate shows the winner and blocks further interaction', () => {
+    render(
+      <Harness
+        game={position(`
+          ...k.....
+          ........R
+          .........
+          .........
+          .........
+          R........
+          .........
+          .........
+          .........
+          .....K...
+        `)}
+      />,
+    );
+    fireEvent.click(pieceImg(0, 5)!);
+    fireEvent.click(markers().find((m) => m.dataset.x === '0' && m.dataset.y === '0')!);
+    expect(status()).toBe('RED WINSCheckmate');
+    fireEvent.click(pieceImg(3, 0)!);
+    fireEvent.click(pieceImg(8, 1)!);
+    expect(screen.queryByTestId('ring-selected')).toBeNull();
+    expect(markers()).toHaveLength(0);
+    expect(pieceImg(0, 0)?.dataset).toMatchObject({ side: 'red', type: 'rook' }); // final position kept
+  });
+
+  it('displays the correct winner when a general is captured', () => {
+    render(
+      <Harness
+        game={position(
+          `
+          ...k.....
+          .........
+          .........
+          .........
+          .........
+          ....r....
+          .........
+          .........
+          .........
+          ....K....
+        `,
+          'blue',
+        )}
+      />,
+    );
+    fireEvent.click(pieceImg(4, 5)!);
+    fireEvent.click(pieceImg(4, 9)!);
+    expect(status()).toBe('BLUE WINSGeneral captured');
+  });
+
+  it('keeps debug mode working', () => {
+    window.history.replaceState(null, '', '/?debug=1');
+    render(<App />);
+    expect(screen.getAllByTestId('debug-intersection')).toHaveLength(90);
+    expect(screen.getAllByTestId('debug-anchor')).toHaveLength(32);
+    window.history.replaceState(null, '', '/');
+  });
+});

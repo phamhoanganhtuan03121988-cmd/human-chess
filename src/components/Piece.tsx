@@ -7,6 +7,8 @@ import { BoardAnchor } from './BoardAnchor.tsx';
 export interface PieceInteraction {
   hovered?: boolean;
   selected?: boolean;
+  /** The selected piece can capture this piece. */
+  capturable?: boolean;
   onHoverChange?: (hovered: boolean) => void;
   onSelect?: () => void;
 }
@@ -26,12 +28,18 @@ export function boardUnits(units: number): string {
 }
 
 /**
- * A static game piece: the official PNG for side + type, resolved through
+ * A game piece: the official PNG for side + type, resolved through
  * the asset manifest, with its bottom-center anchor on intersection (x, y).
  */
-export function Piece({ side, type, x, y, debug = false, hovered, selected, onHoverChange, onSelect }: PieceProps) {
+export function Piece({ side, type, x, y, debug = false, hovered, selected, capturable, onHoverChange, onSelect }: PieceProps) {
   const sprite = getPieceSprite(type);
-  const classes = ['piece', debug && 'piece--debug', hovered && 'is-hovered', selected && 'is-selected'];
+  const classes = [
+    'piece',
+    debug && 'piece--debug',
+    hovered && 'is-hovered',
+    selected && 'is-selected',
+    capturable && 'is-capturable',
+  ];
   return (
     <BoardAnchor
       x={x}
@@ -52,7 +60,10 @@ export function Piece({ side, type, x, y, debug = false, hovered, selected, onHo
         style={{ height: boardUnits(sprite.height) }}
         onPointerEnter={() => onHoverChange?.(true)}
         onPointerLeave={() => onHoverChange?.(false)}
-        onClick={onSelect}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.();
+        }}
       />
     </BoardAnchor>
   );

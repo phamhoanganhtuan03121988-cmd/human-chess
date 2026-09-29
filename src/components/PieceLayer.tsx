@@ -1,69 +1,64 @@
-import { useEffect, useState } from 'react';
 import type { PiecePlacement } from '../board/initialPosition.ts';
+import type { Position } from '../engine/index.ts';
 import { BoardAnchor } from './BoardAnchor.tsx';
 import { Piece } from './Piece.tsx';
 import { PieceBadge } from './PieceBadge.tsx';
-import { PieceRing } from './PieceRing.tsx';
 
 interface PieceLayerProps {
+  /** Pieces derived from the engine GameState. */
   placements: readonly PiecePlacement[];
+  hovered: Position | null;
+  selected: Position | null;
+  /** Enemy pieces the selected piece can capture. */
+  captureTargets: readonly Position[];
+  onHoverChange: (position: Position | null) => void;
+  onClickPiece: (position: Position) => void;
   /** Show sprite outlines and anchor points (debug mode). */
   debug?: boolean;
 }
 
-const keyOf = (p: PiecePlacement) => `${p.x},${p.y}`;
+const at = (list: readonly Position[], p: Position) => list.some((q) => q.x === p.x && q.y === p.y);
+const eq = (a: Position | null, b: Position) => a !== null && a.x === b.x && a.y === b.y;
 
 /**
- * Renders static pieces in stacked layers, all anchored to each piece's
- * intersection:
- *   ground (hover/selected ring) < characters < badges/tooltips < debug.
- * Hover and selection are purely visual; there is no movement yet.
+ * Renders the pieces (characters, then badges above them), all anchored to
+ * each piece's intersection. Purely presentational: clicks are reported
+ * with the board position and handled by the game controller.
  */
-export function PieceLayer({ placements, debug = false }: PieceLayerProps) {
-  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedKey(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  const interaction = (p: PiecePlacement) => {
-    const key = keyOf(p);
-    return {
-      hovered: hoveredKey === key,
-      selected: selectedKey === key,
-      onHoverChange: (on: boolean) => setHoveredKey((cur) => (on ? key : cur === key ? null : cur)),
-      onSelect: () => setSelectedKey((cur) => (cur === key ? null : key)),
-    };
-  };
-
-  const ringed = placements.filter((p) => keyOf(p) === hoveredKey || keyOf(p) === selectedKey);
+export function PieceLayer({
+  placements,
+  hovered,
+  selected,
+  captureTargets,
+  onHoverChange,
+  onClickPiece,
+  debug = false,
+}: PieceLayerProps) {
+  const interaction = (p: PiecePlacement) => ({
+    hovered: eq(hovered, p),
+    selected: eq(selected, p),
+    capturable: at(captureTargets, p),
+    onHoverChange: (on: boolean) => onHoverChange(on ? { x: p.x, y: p.y } : null),
+    onSelect: () => onClickPiece({ x: p.x, y: p.y }),
+  });
+  const key = (p: PiecePlacement) => `${p.side}-${p.type}-${p.x},${p.y}`;
 
   return (
     <>
-      <div className="board__layer board__layer--ground">
-        {ringed.map((p) => (
-          <PieceRing key={keyOf(p)} side={p.side} x={p.x} y={p.y} selected={keyOf(p) === selectedKey} />
-        ))}
-      </div>
       <div className="board__layer board__layer--pieces">
         {placements.map((p) => (
-          <Piece key={keyOf(p)} {...p} debug={debug} {...interaction(p)} />
+          <Piece key={key(p)} {...p} debug={debug} {...interaction(p)} />
         ))}
       </div>
       <div className="board__layer board__layer--badges">
         {placements.map((p) => (
-          <PieceBadge key={keyOf(p)} {...p} {...interaction(p)} />
+          <PieceBadge key={key(p)} {...p} {...interaction(p)} />
         ))}
       </div>
       {debug && (
         <div className="board__layer board__layer--debug">
           {placements.map((p) => (
-            <BoardAnchor key={keyOf(p)} x={p.x} y={p.y}>
+            <BoardAnchor key={key(p)} x={p.x} y={p.y}>
               <span
                 className={`debug-anchor debug-anchor--${p.side}`}
                 data-testid="debug-anchor"
