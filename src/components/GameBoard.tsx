@@ -7,6 +7,8 @@ import type { UiAction, UiState } from '../game/controller.ts';
 import { getAiState, getPlacements, isCaptureTarget } from '../game/controller.ts';
 import { isGameOver } from '../engine/index.ts';
 import { Board } from './Board.tsx';
+import { getImpactProfile } from './combat/combatFx.ts';
+import { useReducedMotion } from './combat/useReducedMotion.ts';
 import { GroundLayer } from './GroundLayer.tsx';
 import { MoveMarkers } from './MoveMarkers.tsx';
 import { PieceLayer } from './PieceLayer.tsx';
@@ -23,6 +25,7 @@ interface GameBoardProps {
  */
 export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
   const [hovered, setHovered] = useState<Position | null>(null);
+  const reducedMotion = useReducedMotion();
   const { game, selected, legalMoves, lastMove } = ui;
 
   const placements = getPlacements(game);
@@ -35,8 +38,13 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
     return p && piece ? { ...p, side: piece.side } : null;
   };
 
+  // Subtle board shake at the combat impact (skipped for reduced motion).
+  const shakePx = ui.combat?.phase === 'impact' && !reducedMotion ? getImpactProfile(ui.combat.attacker.type).shakePx : 0;
+
   return (
     <Board
+      combat={ui.combat !== null}
+      shakePx={shakePx}
       debug={debug}
       headroom={PIECE_HEADROOM}
       interactive={!isGameOver(game) && !ui.combat && getAiState(ui) === 'idle'}

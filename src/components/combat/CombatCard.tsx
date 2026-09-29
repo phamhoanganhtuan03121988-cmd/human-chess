@@ -6,18 +6,21 @@ interface CombatCardProps {
   role: 'attacker' | 'defender';
   piece: Piece;
   visible: boolean;
+  /** Both fighters are squared up (from 900 ms until the end). */
+  active: boolean;
   impact: boolean;
   defeated: boolean;
 }
 
 /** A portrait character card: the piece's official portrait plus its name. */
-export function CombatCard({ role, piece, visible, impact, defeated }: CombatCardProps) {
+export function CombatCard({ role, piece, visible, active, impact, defeated }: CombatCardProps) {
   const { name, glyph } = getPieceDisplayName(piece.side, piece.type);
   const classes = [
     'combat-card',
     `combat-card--${role}`,
     `combat-card--${piece.side}`,
     visible && 'is-visible',
+    active && 'is-active',
     impact && 'is-impact',
     defeated && 'is-defeated',
   ];

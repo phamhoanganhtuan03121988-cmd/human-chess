@@ -85,3 +85,31 @@ describe('combat state (controller)', () => {
     expect(getPieceDisplayName('blue', 'elephant')).toEqual({ name: 'TƯỢNG', glyph: '象' });
   });
 });
+
+describe('combat completion safety', () => {
+  it('a stale completion from an earlier combat is ignored while a new combat runs', () => {
+    // Red cannon takes knight; complete it.
+    const first = capture();
+    const firstId = first.combat!.id;
+    const afterFirst = uiReducer(first, { type: 'combatComplete', id: firstId });
+    // Blue rook recaptures on (1,0) → second combat.
+    const second = click(click(afterFirst, 0, 0), 1, 0);
+    expect(second.combat).not.toBeNull();
+    expect(second.combat!.id).not.toBe(firstId);
+    // A late callback from the first combat must not apply anything.
+    expect(uiReducer(second, { type: 'combatComplete', id: firstId })).toBe(second);
+    expect(uiReducer(second, { type: 'combatPhase', id: firstId, phase: 'impact' })).toBe(second);
+    const done = uiReducer(second, { type: 'combatComplete', id: second.combat!.id });
+    expect(done.game.history).toHaveLength(2);
+    expect(done.game.board[1]![0]).toEqual({ side: 'blue', type: 'rook' });
+  });
+
+  it('a duplicate completion applies the move only once', () => {
+    const s = capture();
+    const id = s.combat!.id;
+    const once = uiReducer(s, { type: 'combatComplete', id });
+    const twice = uiReducer(once, { type: 'combatComplete', id });
+    expect(twice).toBe(once);
+    expect(twice.game.history).toHaveLength(1);
+  });
+});

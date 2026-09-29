@@ -33,6 +33,10 @@ interface BoardProps {
   onBackgroundClick?: () => void;
   /** Whether the board accepts moves (false once the game is over). */
   interactive?: boolean;
+  /** A combat is being presented over the board. */
+  combat?: boolean;
+  /** Impact shake amplitude in px; 0 = no shake. */
+  shakePx?: number;
 }
 
 /**
@@ -40,16 +44,32 @@ interface BoardProps {
  * board-unit coordinate space from layout.ts, so every intersection is at
  * getBoardPoint(x, y) regardless of rendered size.
  */
-export function Board({ debug = false, headroom = 0, children, onBackgroundClick, interactive = true }: BoardProps) {
+export function Board({
+  debug = false,
+  headroom = 0,
+  children,
+  onBackgroundClick,
+  interactive = true,
+  combat = false,
+  shakePx = 0,
+}: BoardProps) {
   const frameHeight = BOARD_HEIGHT + headroom;
   const frameStyle = {
     aspectRatio: `${BOARD_WIDTH} / ${frameHeight}`,
     '--frame-aspect': BOARD_WIDTH / frameHeight,
+    '--shake': `${shakePx}px`,
   } as CSSProperties;
+  const frameClasses = [
+    'board-frame',
+    !interactive && 'board-frame--locked',
+    combat && 'board-frame--combat',
+    shakePx > 0 && 'board-frame--impact',
+  ];
 
   return (
     <div
-      className={interactive ? 'board-frame' : 'board-frame board-frame--locked'}
+      className={frameClasses.filter(Boolean).join(' ')}
+      data-testid="board-frame"
       style={frameStyle}
       onClick={onBackgroundClick}
     >

@@ -5,6 +5,7 @@ import { StatusPanel } from './components/StatusPanel.tsx';
 import { isBoardDebugEnabled } from './config/debug.ts';
 import { createUiState, getAiState, getStatusView, uiReducer } from './game/controller.ts';
 import { useAiOpponent } from './game/useAiOpponent.ts';
+import { useGameAudio } from './game/useGameAudio.ts';
 
 /** V1: the human plays Red, the computer plays Blue. */
 const AI_SIDE = 'blue' as const;
@@ -14,6 +15,7 @@ export function App() {
   const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState(undefined, { aiSide: AI_SIDE }));
   const aiState = getAiState(ui);
   useAiOpponent(ui, dispatch);
+  useGameAudio(ui);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
