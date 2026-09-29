@@ -1,0 +1,22 @@
+{
+  "pieces": {
+    "red": {
+      "general": "/assets/pieces/red/general.png",
+      "advisor": "/assets/pieces/red/advisor.png",
+      "elephant": "/assets/pieces/red/elephant.png",
+      "rook": "/assets/pieces/red/rook.png",
+      "knight": "/assets/pieces/red/knight.png",
+      "cannon": "/assets/pieces/red/cannon.png",
+      "pawn": "/assets/pieces/red/pawn.png"
+    },
+    "blue": {
+      "general": "/assets/pieces/blue/general.png",
+      "advisor": "/assets/pieces/blue/advisor.png",
+      "elephant": "/assets/pieces/blue/elephant.png",
+      "rook": "/assets/pieces/blue/rook.png",
+      "knight": "/assets/pieces/blue/knight.png",
+      "cannon": "/assets/pieces/blue/cannon.png",
+      "pawn": "/assets/pieces/blue/pawn.png"
+    }
+  }
+}

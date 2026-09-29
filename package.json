@@ -1,0 +1,9 @@
+{
+  "name": "human-chess",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate-assets": "node scripts/validate-assets.mjs"
+  }
+}
