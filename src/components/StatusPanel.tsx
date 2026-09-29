@@ -2,10 +2,13 @@ import type { Side } from '../engine/index.ts';
 import type { Activity, StatusView } from '../game/controller.ts';
 
 const REASON: Record<Extract<StatusView, { kind: 'over' }>['reason'], string> = {
-  checkmate: 'CHECKMATE',
-  stalemate: 'STALEMATE',
-  general_captured: 'GENERAL CAPTURED',
+  checkmate: 'CHIẾU BÍ',
+  stalemate: 'BẾ TẮC',
+  general_captured: 'TƯỚNG BỊ BẮT',
 };
+
+const SIDE_LABEL: Record<Side, string> = { red: 'ĐỎ', blue: 'XANH' };
+const SIDE_NAME: Record<Side, string> = { red: 'Đỏ', blue: 'Xanh' };
 
 interface StatusPanelProps {
   status: StatusView;
@@ -17,12 +20,12 @@ interface StatusPanelProps {
 
 /** Main status line for the current turn / activity. */
 function mainText(status: Extract<StatusView, { kind: 'turn' }>, activity: Activity): string {
-  const side = status.side.toUpperCase();
-  if (activity === 'combat') return `${side} ATTACKS`;
-  if (activity === 'moving') return `${side} MOVING`;
-  if (status.thinking || activity === 'thinking') return `${side} THINKING...`;
-  if (status.check) return `${side} IN CHECK`;
-  return `${side} TURN`;
+  const side = SIDE_LABEL[status.side];
+  if (activity === 'combat') return `${side} TẤN CÔNG`;
+  if (activity === 'moving') return `${side} ĐANG ĐI`;
+  if (status.thinking || activity === 'thinking') return `${side} ĐANG NGHĨ...`;
+  if (status.check) return `${side} BỊ CHIẾU`;
+  return `LƯỢT ${side}`;
 }
 
 /** A trailing "..." is kept in the text (screen readers, tests) but drawn as animated dots. */
@@ -38,18 +41,18 @@ function renderMain(text: string) {
 
 /** Short hint telling the player whether they can act. */
 function hintText(status: StatusView, activity: Activity, aiSide: Side | null): string {
-  if (status.kind === 'over') return 'Game over — start a new game';
+  if (status.kind === 'over') return 'Ván đã kết thúc';
   const aiActing = aiSide !== null && status.side === aiSide;
   switch (activity) {
     case 'combat':
-      return 'Battle in progress…';
+      return 'Đang giao chiến…';
     case 'moving':
-      return aiActing ? 'Please wait — Blue is moving' : 'Moving…';
+      return aiActing ? `Chờ chút — ${SIDE_NAME[status.side]} đang đi` : 'Đang di chuyển…';
     case 'thinking':
-      return 'Please wait — Blue is thinking';
+      return `Chờ chút — ${SIDE_NAME[status.side]} đang nghĩ`;
     default:
-      if (aiActing) return 'Please wait';
-      return status.check ? 'Protect your General!' : 'Your move';
+      if (aiActing) return 'Chờ chút';
+      return status.check ? 'Bảo vệ Tướng!' : 'Đến lượt bạn';
   }
 }
 
@@ -70,7 +73,7 @@ export function StatusPanel({ status, activity = 'idle', aiSide = null }: Status
           data-testid="status"
         >
           <span className="status__main">
-            {REASON[status.reason]} — {status.winner.toUpperCase()} WINS
+            {REASON[status.reason]} — {SIDE_LABEL[status.winner]} THẮNG
           </span>
         </div>
         <span className="status-hint" data-testid="status-hint">
@@ -105,7 +108,7 @@ export function StatusPanel({ status, activity = 'idle', aiSide = null }: Status
             <i />
           </span>
         )}
-        {status.thinking && status.check && <span className="status__check">IN CHECK</span>}
+        {status.thinking && status.check && <span className="status__check">BỊ CHIẾU</span>}
       </div>
       <span className={waiting ? 'status-hint status-hint--wait' : 'status-hint'} data-testid="status-hint">
         {hint}

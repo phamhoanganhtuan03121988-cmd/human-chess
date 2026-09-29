@@ -9,8 +9,8 @@ export function SoundToggle() {
       type="button"
       className={muted ? 'toolbar__button sound-toggle is-muted' : 'toolbar__button sound-toggle'}
       aria-pressed={!muted}
-      aria-label={muted ? 'Sound OFF (press M to turn on)' : 'Sound ON (press M to mute)'}
-      title={muted ? 'Sound OFF (M)' : 'Sound ON (M)'}
+      aria-label={muted ? 'Âm thanh TẮT (nhấn M để bật)' : 'Âm thanh BẬT (nhấn M để tắt)'}
+      title={muted ? 'Âm thanh tắt (M)' : 'Âm thanh bật (M)'}
       data-testid="sound-toggle"
       onClick={() => toggleSound()}
     >

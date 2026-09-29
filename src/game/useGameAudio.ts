@@ -42,7 +42,13 @@ function snapshot(ui: UiState): Seen {
   };
 }
 
-export function useGameAudio(ui: UiState): void {
+export interface GameAudioOptions {
+  /** Play the new-game cue when the game id changes (off for replays). */
+  readonly newGameSound?: boolean;
+}
+
+export function useGameAudio(ui: UiState, options: GameAudioOptions = {}): void {
+  const newGameSound = options.newGameSound ?? true;
   const seen = useRef<Seen | null>(null);
   const now = snapshot(ui);
 
@@ -52,7 +58,7 @@ export function useGameAudio(ui: UiState): void {
     if (!prev) return; // first render: nothing happened yet
 
     if (now.gameId !== prev.gameId) {
-      playNewGameSound();
+      if (newGameSound) playNewGameSound();
       return;
     }
     if (now.selectedKey && now.selectedKey !== prev.selectedKey) playSelectSound();

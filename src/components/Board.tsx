@@ -90,7 +90,7 @@ export function Board({
           className="board__svg"
           viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
           preserveAspectRatio="xMidYMid meet"
-          aria-label="Xiangqi board"
+          aria-label="Bàn cờ tướng"
           role="img"
         >
           <BoardLines />

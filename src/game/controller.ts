@@ -21,6 +21,8 @@ import {
   pieceAt,
 } from '../engine/index.ts';
 import type { GameState, Move, Piece, Position, Side } from '../engine/index.ts';
+import { DEFAULT_DIFFICULTY } from '../ai/difficulty.ts';
+import type { Difficulty } from '../ai/difficulty.ts';
 
 /**
  * Combat presentation for a capture (UI only, not part of the engine).
@@ -48,6 +50,8 @@ export interface MovementState {
   readonly id: number;
   readonly piece: Piece;
   readonly move: Move;
+  /** Replay only: this movement captures (replays use a short capture instead of the full combat). */
+  readonly capture?: boolean;
 }
 
 export interface UiState {
@@ -64,6 +68,10 @@ export interface UiState {
   readonly gameId: number;
   /** Side played by the computer, or null for two local players. */
   readonly aiSide: Side | null;
+  /** AI strength (used when aiSide is set). */
+  readonly difficulty: Difficulty;
+  /** Read-only replay of recorded moves: no input, no AI, short captures. */
+  readonly replay: boolean;
 }
 
 /** Whether the computer is currently choosing a move. */
@@ -71,6 +79,10 @@ export type AiState = 'idle' | 'thinking';
 
 export interface UiOptions {
   readonly aiSide?: Side | null;
+  readonly difficulty?: Difficulty;
+  readonly replay?: boolean;
+  /** Last move to highlight (e.g. when restoring a saved game). */
+  readonly lastMove?: Move | null;
 }
 
 export type UiAction =
@@ -85,7 +97,12 @@ export type UiAction =
    * A move chosen by the AI for the position identified by gameId + ply
    * (history length). Ignored if that position is no longer current.
    */
-  | { readonly type: 'aiMove'; readonly gameId: number; readonly ply: number; readonly move: Move };
+  | { readonly type: 'aiMove'; readonly gameId: number; readonly ply: number; readonly move: Move }
+  /** Replay: play the next recorded move (validated like any move). */
+  | { readonly type: 'replayMove'; readonly gameId: number; readonly ply: number; readonly move: Move }
+  /** Replace the whole UI state (resume a saved game, jump within a replay). Ignored while presenting. */
+  | { readonly type: 'load'; readonly state: UiState }
+  | { readonly type: 'setDifficulty'; readonly difficulty: Difficulty };
 
 let nextGameId = 1;
 
@@ -94,11 +111,13 @@ export function createUiState(game: GameState = createInitialGameState(), option
     game,
     selected: null,
     legalMoves: [],
-    lastMove: null,
+    lastMove: options.lastMove ?? null,
     combat: null,
     movement: null,
     gameId: nextGameId++,
-    aiSide: options.aiSide ?? null,
+    aiSide: options.replay ? null : (options.aiSide ?? null),
+    difficulty: options.difficulty ?? DEFAULT_DIFFICULTY,
+    replay: options.replay ?? false,
   };
 }
 
@@ -162,6 +181,7 @@ function select(state: UiState, position: Position): UiState {
  * - anything else → clear selection
  */
 export function handleClick(state: UiState, position: Position): UiState {
+  if (state.replay) return state; // replays are watched, not played
   if (isPresenting(state)) return state; // board is frozen during combat / movement
   if (state.aiSide !== null && state.game.turn === state.aiSide) return state; // AI's turn
   if (isGameOver(state.game)) return clearSelection(state);
@@ -186,6 +206,11 @@ function playMove(state: UiState, move: Move): UiState {
   const attacker = pieceAt(state.game.board, move.from);
   const defender = pieceAt(state.game.board, move.to);
   if (!attacker) return clearSelection(state);
+  if (defender && state.replay) {
+    // Replay: a short capture (slide + impact pulse) instead of the full combat.
+    const movement: MovementState = { id: nextMovementId++, piece: attacker, move, capture: true };
+    return { ...state, selected: null, legalMoves: [], movement };
+  }
   if (defender) {
     // Capture: present the combat first; the engine applies it on completion.
     const combat: CombatState = { id: nextCombatId++, phase: 'entering', attacker, defender, move };
@@ -228,7 +253,18 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return isPresenting(state) ? state : clearSelection(state);
     case 'newGame':
       // Blocked while presenting; a new game id makes any pending AI result stale.
-      return isPresenting(state) ? state : createUiState(undefined, { aiSide: state.aiSide });
+      return isPresenting(state)
+        ? state
+        : createUiState(undefined, { aiSide: state.aiSide, difficulty: state.difficulty, replay: state.replay });
+    case 'replayMove':
+      if (!state.replay || isPresenting(state)) return state;
+      if (action.gameId !== state.gameId || action.ply !== state.game.history.length) return state;
+      if (!isLegalMove(state.game, action.move)) return state;
+      return playMove(state, action.move);
+    case 'load':
+      return isPresenting(state) ? state : action.state;
+    case 'setDifficulty':
+      return state.difficulty === action.difficulty ? state : { ...state, difficulty: action.difficulty };
     case 'aiMove':
       return handleAiMove(state, action);
     case 'combatPhase':
@@ -300,32 +336,40 @@ export function getCheckingPieces(game: GameState): Position[] {
 }
 
 export interface GameOverView {
+  /** Result headline, e.g. "CHIẾU BÍ". */
   readonly title: string;
   readonly winner: Side;
   readonly loser: Side;
+  /** e.g. "ĐỎ THẮNG". */
+  readonly winnerText: string;
+  /** One-sentence explanation of what happened. */
   readonly detail: string;
+  readonly reason: 'checkmate' | 'stalemate' | 'general_captured';
   /** The losing side's General, if still on the board. */
   readonly defeatedGeneral: Position | null;
 }
 
-const SIDE_NAME: Record<Side, string> = { red: 'Red', blue: 'Blue' };
+const SIDE_VI: Record<Side, string> = { red: 'Đỏ', blue: 'Xanh' };
 
 /** Presentation of a finished game, read from the engine status. Null while playing. */
 export function getGameOverView(game: GameState): GameOverView | null {
   if (game.status === 'playing' || !game.winner) return null;
   const winner = game.winner;
   const loser = opponent(winner);
-  const titles = { checkmate: 'CHECKMATE', stalemate: 'STALEMATE', general_captured: 'GENERAL CAPTURED' } as const;
+  const titles = { checkmate: 'CHIẾU BÍ', stalemate: 'BẾ TẮC', general_captured: 'TƯỚNG BỊ BẮT' } as const;
   const details = {
-    checkmate: `${SIDE_NAME[loser]}'s General cannot escape`,
-    stalemate: `${SIDE_NAME[loser]} has no legal moves`,
-    general_captured: `${SIDE_NAME[loser]}'s General has fallen`,
+    checkmate: `Tướng ${SIDE_VI[loser]} bị chiếu và không còn đường thoát.`,
+    // Xiangqi: the side left without a legal move loses (it is not a draw).
+    stalemate: `${SIDE_VI[loser]} không còn nước đi hợp lệ — theo luật cờ tướng, bên bế tắc thua.`,
+    general_captured: `Tướng ${SIDE_VI[loser]} đã bị bắt.`,
   } as const;
   return {
     title: titles[game.status],
     winner,
     loser,
+    winnerText: `${SIDE_VI[winner].toUpperCase()} THẮNG`,
     detail: details[game.status],
+    reason: game.status,
     defeatedGeneral: findGeneral(game.board, loser),
   };
 }

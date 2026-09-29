@@ -39,7 +39,7 @@ const status = () => screen.getByTestId('status').textContent;
 
 describe('GameBoard UI', () => {
   it('renders 32 pieces, each with its own side/type asset', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     const imgs = screen.getAllByTestId('piece') as HTMLImageElement[];
     expect(imgs).toHaveLength(32);
     for (const img of imgs) {
@@ -49,19 +49,19 @@ describe('GameBoard UI', () => {
   });
 
   it('shows RED TURN at the start', () => {
-    render(<App />);
-    expect(status()).toBe('RED TURN');
+    render(<App initialScreen="game" />);
+    expect(status()).toBe('LƯỢT ĐỎ');
   });
 
   it('clicking a red piece selects it and shows its legal move markers', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(4, 6)!);
     expect(screen.getByTestId('ring-selected')).toBeTruthy();
     expect(markers().map((m) => `${m.dataset.x},${m.dataset.y}`)).toEqual(['4,5']);
   });
 
   it('clicking a blue piece on red’s turn does not select it', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(1, 0)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
     expect(markers()).toHaveLength(0);
@@ -69,13 +69,13 @@ describe('GameBoard UI', () => {
 
   it('clicking a legal marker moves the piece, switches turn and marks the last move', () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(4, 6)!);
     fireEvent.click(markers()[0]!);
     finishMove();
     expect(pieceImg(4, 6)).toBeNull();
     expect(pieceImg(4, 5)?.dataset).toMatchObject({ side: 'red', type: 'pawn' });
-    expect(status()).toBe('BLUE THINKING...'); // App plays Blue with the AI
+    expect(status()).toBe('XANH ĐANG NGHĨ...'); // App plays Blue with the AI
     expect(markers()).toHaveLength(0);
     const from = screen.getByTestId('last-move-from');
     const to = screen.getByTestId('ring-last-move');
@@ -83,17 +83,17 @@ describe('GameBoard UI', () => {
   });
 
   it('an illegal click (empty non-destination) does not move and clears selection', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(4, 6)!);
     fireEvent.click(document.querySelector('.board-frame')!); // board background
     expect(pieceImg(4, 6)).not.toBeNull();
     expect(markers()).toHaveLength(0);
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
   });
 
   it('marks captures with a ring and removes the captured piece', () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(1, 7)!); // red cannon
     const captureRings = screen.getAllByTestId('ring-capture');
     expect(captureRings.map((r) => `${r.dataset.x},${r.dataset.y}`)).toEqual(['1,0']);
@@ -105,7 +105,7 @@ describe('GameBoard UI', () => {
   });
 
   it('clicking the selected piece again clears the selection', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(4, 6)!);
     fireEvent.click(pieceImg(4, 6)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
@@ -113,7 +113,7 @@ describe('GameBoard UI', () => {
   });
 
   it('Escape clears the selection', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(4, 6)!);
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -123,7 +123,7 @@ describe('GameBoard UI', () => {
   });
 
   it('centers every marker on its intersection with resolution-independent positions', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(pieceImg(1, 9)!); // red knight
     const ms = markers();
     expect(ms).toHaveLength(2);
@@ -157,7 +157,7 @@ describe('GameBoard UI', () => {
     fireEvent.click(pieceImg(0, 5)!);
     fireEvent.click(markers().find((m) => m.dataset.x === '4' && m.dataset.y === '5')!);
     finishMove();
-    expect(status()).toBe('BLUE IN CHECK');
+    expect(status()).toBe('XANH BỊ CHIẾU');
     const ring = screen.getByTestId('ring-check');
     expect([ring.dataset.x, ring.dataset.y]).toEqual(['4', '0']);
   });
@@ -183,7 +183,7 @@ describe('GameBoard UI', () => {
     fireEvent.click(pieceImg(0, 5)!);
     fireEvent.click(markers().find((m) => m.dataset.x === '0' && m.dataset.y === '0')!);
     finishMove();
-    expect(status()).toBe('CHECKMATE — RED WINS');
+    expect(status()).toBe('CHIẾU BÍ — ĐỎ THẮNG');
     fireEvent.click(pieceImg(3, 0)!);
     fireEvent.click(pieceImg(8, 1)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
@@ -215,12 +215,12 @@ describe('GameBoard UI', () => {
     fireEvent.click(pieceImg(4, 5)!);
     fireEvent.click(pieceImg(4, 9)!);
     finishCombat();
-    expect(status()).toBe('GENERAL CAPTURED — BLUE WINS');
+    expect(status()).toBe('TƯỚNG BỊ BẮT — XANH THẮNG');
   });
 
   it('keeps debug mode working', () => {
     window.history.replaceState(null, '', '/?debug=1');
-    render(<App />);
+    render(<App initialScreen="game" />);
     expect(screen.getAllByTestId('debug-intersection')).toHaveLength(90);
     expect(screen.getAllByTestId('debug-anchor')).toHaveLength(32);
     window.history.replaceState(null, '', '/');

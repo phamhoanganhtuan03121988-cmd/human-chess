@@ -4,7 +4,7 @@
  */
 import { FILES, RANKS } from '../board/geometry.ts';
 import { getPseudoLegalTargets } from '../engine/index.ts';
-import type { GameState, Piece, PieceType, Side } from '../engine/index.ts';
+import type { Board, GameState, Piece, PieceType, Side } from '../engine/index.ts';
 
 export const PIECE_VALUES: Readonly<Record<PieceType, number>> = {
   general: 10000,
@@ -39,7 +39,30 @@ function advance(side: Side, y: number): number {
   return side === 'red' ? RANKS - 1 - y : y;
 }
 
-function pieceScore(state: GameState, piece: Piece, x: number, y: number): number {
+/**
+ * Evaluation personality. `standard` is the full evaluation; `casual`
+ * (Easy) values material more loosely and ignores positional nuance and
+ * mobility, so it plays plausible but weaker, more "human" moves.
+ */
+export type EvalStyle = 'standard' | 'casual';
+
+/** Looser material table for the casual style. */
+export const CASUAL_PIECE_VALUES: Readonly<Record<PieceType, number>> = {
+  general: 10000,
+  rook: 600,
+  cannon: 380,
+  knight: 380,
+  elephant: 150,
+  advisor: 150,
+  pawn: 110,
+};
+
+function pieceScore(board: Board, piece: Piece, x: number, y: number, style: EvalStyle): number {
+  if (style === 'casual') {
+    let score = CASUAL_PIECE_VALUES[piece.type];
+    if (piece.type === 'pawn' && advance(piece.side, y) >= 5) score += POSITIONAL.pawnCrossedRiver;
+    return score;
+  }
   let score = PIECE_VALUES[piece.type];
   const adv = advance(piece.side, y);
   switch (piece.type) {
@@ -70,21 +93,34 @@ function pieceScore(state: GameState, piece: Piece, x: number, y: number): numbe
       break;
   }
   const mobilityWeight = POSITIONAL.mobility[piece.type];
-  if (mobilityWeight) score += mobilityWeight * getPseudoLegalTargets(state.board, { x, y }).length;
+  if (mobilityWeight) score += mobilityWeight * getPseudoLegalTargets(board, { x, y }).length;
   return score;
+}
+
+/**
+ * Evaluation of a board from `side`'s point of view. `checkedSide` is the
+ * side currently in check (if any).
+ */
+export function evaluateBoard(
+  board: Board,
+  side: Side,
+  checkedSide: Side | null = null,
+  style: EvalStyle = 'standard',
+): number {
+  let total = 0;
+  for (let x = 0; x < FILES; x++) {
+    for (let y = 0; y < RANKS; y++) {
+      const piece = board[x]![y];
+      if (!piece) continue;
+      const s = pieceScore(board, piece, x, y, style);
+      total += piece.side === side ? s : -s;
+    }
+  }
+  if (checkedSide && style === 'standard') total += checkedSide === side ? POSITIONAL.inCheck : -POSITIONAL.inCheck;
+  return total;
 }
 
 /** Evaluation of a non-terminal position from `side`'s point of view. */
 export function evaluate(state: GameState, side: Side): number {
-  let total = 0;
-  for (let x = 0; x < FILES; x++) {
-    for (let y = 0; y < RANKS; y++) {
-      const piece = state.board[x]![y];
-      if (!piece) continue;
-      const s = pieceScore(state, piece, x, y);
-      total += piece.side === side ? s : -s;
-    }
-  }
-  if (state.inCheck) total += state.turn === side ? POSITIONAL.inCheck : -POSITIONAL.inCheck;
-  return total;
+  return evaluateBoard(state.board, side, state.inCheck ? state.turn : null);
 }

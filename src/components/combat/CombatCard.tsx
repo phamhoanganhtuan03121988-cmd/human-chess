@@ -36,7 +36,7 @@ export function CombatCard({ role, piece, visible, active, impact, defeated }: C
         />
       </div>
       <figcaption className="combat-card__caption">
-        <span className="combat-card__role">{role === 'attacker' ? 'ATTACKER' : 'DEFENDER'}</span>
+        <span className="combat-card__role">{role === 'attacker' ? 'TẤN CÔNG' : 'PHÒNG THỦ'}</span>
         <span className="combat-card__name" data-testid={`combat-${role}-name`}>
           {name}
         </span>

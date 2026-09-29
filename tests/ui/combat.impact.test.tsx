@@ -69,7 +69,7 @@ function captureWith(diagram: string, turn: Side, from: [number, number], to: [n
 
 describe('combat impact: human Red Cannon captures Blue Knight', () => {
   it('plays the full sequence with impact FX, then applies the move exactly once', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
 
@@ -124,7 +124,7 @@ describe('combat impact: human Red Cannon captures Blue Knight', () => {
     expect(pieceAt(1, 7)).toBeNull();
     expect(screen.getAllByTestId('piece')).toHaveLength(31);
     expect(boardFrame().className).not.toContain('board-frame--combat');
-    expect(screen.getByTestId('status').textContent).toBe('BLUE THINKING...');
+    expect(screen.getByTestId('status').textContent).toBe('XANH ĐANG NGHĨ...');
   });
 });
 
@@ -164,7 +164,7 @@ describe('combat impact: AI Blue captures Red with the same system', () => {
     expect(overlay()).toBeNull();
     expect(pieceAt(0, 6)).toBe('blue rook');
     expect(screen.getByTestId('ply').textContent).toBe('1');
-    expect(screen.getByTestId('status').textContent).toBe('RED TURN');
+    expect(screen.getByTestId('status').textContent).toBe('LƯỢT ĐỎ');
   });
 });
 
@@ -247,7 +247,7 @@ describe('piece-specific effects', () => {
 describe('reduced motion', () => {
   it('keeps combat working with fewer particles and no shake', () => {
     reducedMotion = true;
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
     expect(overlay()!.className).toContain('combat-overlay--reduced');

@@ -59,32 +59,32 @@ const humanPawnMove = () => {
 
 describe('AI game flow (UI)', () => {
   it('the AI does not move before the human', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     advance(5000);
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
     expect(screen.getAllByTestId('piece')).toHaveLength(32);
     expect(pieceAt(4, 3)).toBe('blue pawn');
   });
 
   it('a human move triggers the AI; the board is locked while it thinks; control returns to Red', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     humanPawnMove();
-    expect(status()).toBe('BLUE THINKING...');
+    expect(status()).toBe('XANH ĐANG NGHĨ...');
     expect(locked()).toBe(true);
-    expect((screen.getByText('New game') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('new-game') as HTMLButtonElement).disabled).toBe(true);
     // Clicking during thinking does nothing.
     fireEvent.click(img(0, 9)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
 
     // humanPawnMove already spent ~60 ms of the AI delay after the move committed.
     advance(AI_THINK_DELAY_MS - 150);
-    expect(status()).toBe('BLUE THINKING...'); // still presenting the delay
+    expect(status()).toBe('XANH ĐANG NGHĨ...'); // still presenting the delay
     advance(200);
     if (overlay()) advance(1600); // an AI capture plays the combat first…
     else advance(300); // …a normal AI move animates first
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
     expect(locked()).toBe(false);
-    expect((screen.getByText('New game') as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId('new-game') as HTMLButtonElement).disabled).toBe(false);
     const last = screen.getByTestId('ring-last-move');
     expect(pieceAt(Number(last.dataset.x), Number(last.dataset.y))).toMatch(/^blue /);
   });
@@ -94,7 +94,7 @@ describe('AI game flow (UI)', () => {
     humanPawnMove();
     advance(10_000);
     expect(screen.getByTestId('ply').textContent).toBe('2');
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
   });
 
   it('an AI capture uses the existing CombatOverlay and changes the board only after it completes', () => {
@@ -116,7 +116,7 @@ describe('AI game flow (UI)', () => {
         )}
       />,
     );
-    expect(status()).toBe('BLUE THINKING...');
+    expect(status()).toBe('XANH ĐANG NGHĨ...');
     advance(AI_THINK_DELAY_MS + 50);
     expect(overlay()).not.toBeNull();
     const src = (id: string) => new URL((screen.getByTestId(id) as HTMLImageElement).src).pathname;
@@ -128,7 +128,7 @@ describe('AI game flow (UI)', () => {
     expect(overlay()).toBeNull();
     expect(pieceAt(0, 6)).toBe('blue rook');
     expect(pieceAt(0, 2)).toBeNull();
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
     advance(5000);
     expect(screen.getByTestId('ply').textContent).toBe('1'); // no extra AI move
   });
@@ -139,7 +139,7 @@ describe('AI game flow (UI)', () => {
     advance(300);
     fireEvent.click(screen.getByText('force-new-game'));
     advance(5000);
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
     expect(screen.getByTestId('ply').textContent).toBe('0');
     expect(pieceAt(4, 6)).toBe('red pawn');
     expect(pieceAt(4, 3)).toBe('blue pawn');
@@ -164,7 +164,7 @@ describe('AI game flow (UI)', () => {
         )}
       />,
     );
-    expect(status()).toBe('CHECKMATE — RED WINS');
+    expect(status()).toBe('CHIẾU BÍ — ĐỎ THẮNG');
     advance(5000);
     expect(overlay()).toBeNull();
     expect(screen.getByTestId('ply').textContent).toBe('0');
@@ -192,7 +192,7 @@ describe('AI game flow (UI)', () => {
     advance(AI_THINK_DELAY_MS + 50);
     if (overlay()) advance(1600);
     else advance(300); // mating move animates before it is applied
-    expect(status()).toMatch(/— BLUE WINS$/);
+    expect(status()).toMatch(/— XANH THẮNG$/);
     advance(5000);
     expect(screen.getByTestId('ply').textContent).toBe('1');
   });

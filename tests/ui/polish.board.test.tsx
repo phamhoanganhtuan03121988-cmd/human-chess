@@ -179,19 +179,20 @@ describe('10.4 check / game over presentation', () => {
     advance(300);
     const banner = screen.getByTestId('game-over');
     expect(banner.dataset.winner).toBe('red');
-    expect(banner.textContent).toContain('CHECKMATE');
-    expect(banner.textContent).toContain('RED WINS');
-    expect(banner.textContent).toContain("Blue's General cannot escape");
+    expect(banner.textContent).toContain('CHIẾU BÍ');
+    expect(banner.textContent).toContain('ĐỎ THẮNG');
+    expect(banner.textContent).toContain('Tướng Xanh bị chiếu và không còn đường thoát.');
+    expect(banner.dataset.reason).toBe('checkmate');
     expect(screen.getByTestId('board-frame').className).toContain('board-frame--over');
     expectCentered(screen.getByTestId('ring-defeated'), 3, 0);
     expect(img(0, 0)!.dataset.side).toBe('red'); // final position still visible
     // Input stays locked except the banner button.
     fireEvent.click(img(8, 1)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
-    fireEvent.click(screen.getByText('New game', { selector: '.game-over__button' }));
+    fireEvent.click(screen.getByText('VÁN MỚI', { selector: '.game-over__button' }));
     expect(screen.queryByTestId('game-over')).toBeNull();
     expect(screen.getByTestId('ply').textContent).toBe('0');
-    expect(screen.getByTestId('status').textContent).toBe('RED TURN');
+    expect(screen.getByTestId('status').textContent).toBe('LƯỢT ĐỎ');
   });
 
   it('stalemate and general capture have their own wording', () => {
@@ -210,15 +211,17 @@ describe('10.4 check / game over presentation', () => {
       'blue',
     );
     expect(getGameOverView(stalemate)).toMatchObject({
-      title: 'STALEMATE',
+      title: 'BẾ TẮC',
       winner: 'red',
       loser: 'blue',
-      detail: 'Blue has no legal moves',
+      winnerText: 'ĐỎ THẮNG',
+      reason: 'stalemate',
+      detail: 'Xanh không còn nước đi hợp lệ — theo luật cờ tướng, bên bế tắc thua.',
       defeatedGeneral: { x: 4, y: 0 },
     });
     render(<Harness game={stalemate} />);
-    expect(screen.getByTestId('game-over').textContent).toContain('STALEMATE');
-    expect(screen.getByTestId('status').textContent).toBe('STALEMATE — RED WINS');
+    expect(screen.getByTestId('game-over').textContent).toContain('BẾ TẮC');
+    expect(screen.getByTestId('status').textContent).toBe('BẾ TẮC — ĐỎ THẮNG');
 
     const captured = position(
       `
@@ -233,7 +236,13 @@ describe('10.4 check / game over presentation', () => {
       .........
       ....R....`,
     );
-    expect(getGameOverView(captured)).toMatchObject({ title: 'GENERAL CAPTURED', winner: 'blue', defeatedGeneral: null });
+    expect(getGameOverView(captured)).toMatchObject({
+      title: 'TƯỚNG BỊ BẮT',
+      winner: 'blue',
+      winnerText: 'XANH THẮNG',
+      detail: 'Tướng Đỏ đã bị bắt.',
+      defeatedGeneral: null,
+    });
     expect(getGameOverView(createUiState().game)).toBeNull();
   });
 });

@@ -29,7 +29,7 @@ export function MoveMarkers({ targets, captureTargets = [], hovered = null, onSe
           <button
             type="button"
             className="move-marker"
-            aria-label={`Move to ${p.x},${p.y}`}
+            aria-label={`Đi tới ${p.x},${p.y}`}
             data-testid="move-marker"
             data-x={p.x}
             data-y={p.y}

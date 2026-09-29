@@ -60,7 +60,7 @@ export function PieceBadge({
           type="button"
           className={classes.filter(Boolean).join(' ')}
           style={{ width: size, height: size, fontSize: `calc(${size} * 0.62)` }}
-          aria-label={`${side} ${type}: ${label}`}
+          aria-label={`${label} (${side === 'red' ? 'Đỏ' : 'Xanh'})`}
           aria-pressed={selected}
           data-testid="piece-badge"
           data-side={side}

@@ -29,13 +29,19 @@ interface GameBoardProps {
   ui: UiState;
   dispatch: (action: UiAction) => void;
   debug?: boolean;
+  /** Called by the game-over banner's "new game" (defaults to the newGame action). */
+  onNewGame?: () => void;
+  /** Watch the finished game again (shows XEM LẠI on the result banner). */
+  onReplay?: (() => void) | null;
+  /** Hide the result banner (e.g. while a replay reaches the final move). */
+  showResult?: boolean;
 }
 
 /**
  * The playable board: renders the engine GameState and reports clicks as
  * board positions. All rule decisions happen in the engine via the controller.
  */
-export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
+export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = null, showResult = true }: GameBoardProps) {
   const [hovered, setHovered] = useState<Position | null>(null);
   const reducedMotion = useReducedMotion();
   useMovementDriver(ui.movement, dispatch, reducedMotion);
@@ -83,6 +89,7 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
         defeatedGeneral={gameOver?.defeatedGeneral ?? null}
         victorGeneral={gameOver ? findGeneral(game.board, gameOver.winner) : null}
         landingKey={lastMove && !reducedMotion ? `${ui.gameId}:${game.history.length}` : null}
+        landingCapture={ui.replay && !!game.history[game.history.length - 1]?.captured}
       />
       <PieceLayer
         placements={placements}
@@ -111,7 +118,9 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
         debug={debug}
       />
       <MoveMarkers targets={emptyTargets} captureTargets={captureTargets} hovered={hovered} onSelectTarget={click} />
-      {gameOver && <GameOverBanner view={gameOver} onNewGame={() => dispatch({ type: 'newGame' })} />}
+      {gameOver && showResult && (
+        <GameOverBanner view={gameOver} onNewGame={onNewGame ?? (() => dispatch({ type: 'newGame' }))} onReplay={onReplay} />
+      )}
     </Board>
   );
 }

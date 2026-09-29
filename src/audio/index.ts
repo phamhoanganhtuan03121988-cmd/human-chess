@@ -13,10 +13,19 @@ import { getAudio, installAudioUnlock, onAudioUnlocked, setMasterLevel, unlockAu
 import { startAmbience, stopAmbience } from './music.ts';
 import * as S from './sounds.ts';
 import type { CombatCue, GameResult } from './sounds.ts';
-import { VOLUME, isMuted, setMuted, subscribeMute, toggleMuted } from './volume.ts';
+import { VOLUME, getVolume, isMuted, setMuted, subscribeMute, subscribeVolume, toggleMuted } from './volume.ts';
 
 export type { CombatCue, GameResult } from './sounds.ts';
-export { VOLUME, isMuted, setMuted, subscribeMute, toggleMuted } from './volume.ts';
+export {
+  VOLUME,
+  getVolume,
+  isMuted,
+  setMuted,
+  setVolume,
+  subscribeMute,
+  subscribeVolume,
+  toggleMuted,
+} from './volume.ts';
 export { installAudioUnlock, isAudioUnlocked, unlockAudio } from './audioContext.ts';
 
 export type SoundName =
@@ -74,7 +83,7 @@ export function setAudioBackend(next: AudioBackend | null): void {
 }
 
 function play(name: SoundName, detail: Record<string, string> = {}): void {
-  if (isMuted()) return;
+  if (isMuted() || getVolume() === 0) return;
   if (!backend.play(name, detail)) return;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('human-chess:sound', { detail: { name, ...detail } }));
@@ -103,15 +112,17 @@ export function initAudio(): () => void {
   const removeUnlock = installAudioUnlock();
   if (wired) return removeUnlock;
   wired = true;
-  const apply = (muted: boolean) => {
+  const apply = () => {
     const a = getAudio();
     if (!a) return;
-    setMasterLevel(muted ? 0 : 1);
+    const muted = isMuted() || getVolume() === 0;
+    setMasterLevel(muted ? 0 : getVolume());
     if (muted) stopAmbience(a.ctx);
     else startAmbience(a.ctx, a.master);
   };
-  onAudioUnlocked(() => apply(isMuted()));
+  onAudioUnlocked(apply);
   subscribeMute(apply);
+  subscribeVolume(apply);
   return removeUnlock;
 }
 

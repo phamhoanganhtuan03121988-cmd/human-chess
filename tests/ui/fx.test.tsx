@@ -154,7 +154,7 @@ describe('AI thinking indicator', () => {
     fireEvent.click(img(0, 6)!);
     fireEvent.click(marker(0, 5));
     advance(300);
-    expect(screen.getByTestId('status').textContent).toBe('BLUE THINKING...');
+    expect(screen.getByTestId('status').textContent).toBe('XANH ĐANG NGHĨ...');
     expect(screen.getByTestId('thinking-dots').querySelectorAll('i')).toHaveLength(3);
     advance(1400);
     expect(screen.queryByTestId('thinking-dots')).toBeNull();
@@ -181,7 +181,7 @@ describe('game over', () => {
     fireEvent.click(img(0, 5)!);
     fireEvent.click(marker(0, 0));
     advance(300);
-    expect(screen.getByTestId('game-over').textContent).toContain('CHECKMATE');
+    expect(screen.getByTestId('game-over').textContent).toContain('CHIẾU BÍ');
     expectCentered(screen.getByTestId('ring-victor'), 5, 9);
     expectCentered(screen.getByTestId('ring-defeated'), 3, 0);
     expect(screen.getByTestId('board-frame').className).toContain('board-frame--over');

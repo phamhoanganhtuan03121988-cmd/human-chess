@@ -5,28 +5,24 @@
  * the UI: it receives a GameState and returns a Move.
  */
 import { useEffect } from 'react';
-import { createAiPlayer } from '../ai/index.ts';
-import type { AiPlayer } from '../ai/index.ts';
+import { createDifficultyPlayer } from '../ai/index.ts';
 import type { UiAction, UiState } from './controller.ts';
 import { getAiState } from './controller.ts';
 
-/** Total time from the AI's turn starting to its move being played (plus search time if longer). */
-export const AI_THINK_DELAY_MS = 700;
+/**
+ * Minimum time from the AI's turn starting to its move being played, so the
+ * "thinking" state is readable. Real search time counts toward it; the AI is
+ * never held back beyond this short pacing.
+ */
+export const AI_THINK_DELAY_MS = 450;
 /** Short pause so "THINKING..." renders before the (synchronous) search runs. */
 const SEARCH_START_MS = 30;
 
-const players = new Map<string, AiPlayer>();
-function playerFor(side: 'red' | 'blue'): AiPlayer {
-  let p = players.get(side);
-  if (!p) players.set(side, (p = createAiPlayer(side)));
-  return p;
-}
-
-export function useAiOpponent(ui: UiState, dispatch: (action: UiAction) => void): void {
-  const thinking = getAiState(ui) === 'thinking';
+export function useAiOpponent(ui: UiState, dispatch: (action: UiAction) => void, enabled = true): void {
+  const thinking = enabled && getAiState(ui) === 'thinking';
   // One request per (game, position): re-renders or StrictMode re-runs do not start a second search.
-  const requestKey = thinking ? `${ui.gameId}:${ui.game.history.length}` : null;
-  const { game, gameId, aiSide } = ui;
+  const requestKey = thinking ? `${ui.gameId}:${ui.game.history.length}:${ui.difficulty}` : null;
+  const { game, gameId, aiSide, difficulty } = ui;
 
   useEffect(() => {
     if (!requestKey || !aiSide) return;
@@ -35,7 +31,7 @@ export function useAiOpponent(ui: UiState, dispatch: (action: UiAction) => void)
     let dispatchTimer: number | undefined;
 
     const searchTimer = window.setTimeout(() => {
-      const result = playerFor(aiSide).chooseMove(game);
+      const result = createDifficultyPlayer(aiSide, difficulty).chooseMove(game);
       if (!result) return;
       const wait = Math.max(0, AI_THINK_DELAY_MS - (performance.now() - started));
       dispatchTimer = window.setTimeout(() => dispatch({ type: 'aiMove', gameId, ply, move: result.move }), wait);

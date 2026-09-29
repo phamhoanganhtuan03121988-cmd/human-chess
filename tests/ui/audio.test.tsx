@@ -178,7 +178,7 @@ describe('first interaction initializes Web Audio', () => {
     (window as unknown as { AudioContext: unknown }).AudioContext = FakeCtx;
     resetAudioContextForTests();
     audio.setAudioBackend(null);
-    render(<App />);
+    render(<App initialScreen="game" />);
     expect(audio.isAudioUnlocked()).toBe(false);
     audio.playSelectSound();
     expect(starts).toHaveLength(0); // nothing before the first gesture
@@ -197,7 +197,7 @@ describe('first interaction initializes Web Audio', () => {
 
 describe('sound toggle and M shortcut', () => {
   it('toolbar button and M toggle sound; M is ignored while typing', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     const btn = screen.getByTestId('sound-toggle');
     expect(btn.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(btn);
@@ -215,7 +215,7 @@ describe('sound toggle and M shortcut', () => {
   });
 
   it('muting silences game sounds; unmuting brings them back', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(screen.getByTestId('sound-toggle')); // off
     fireEvent.click(img(4, 6)!);
     expect(calls).toEqual([]);
@@ -342,13 +342,18 @@ describe('game sounds fire on transitions only', () => {
   });
 
   it('New Game plays the reset sound', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(img(4, 6)!);
     fireEvent.click(marker(4, 5));
     advance(300 + AI_THINK_DELAY_MS + 40);
     advance(2000); // AI reply (possibly a combat) finishes
     calls = [];
-    fireEvent.click(screen.getByText('New game'));
+    fireEvent.click(screen.getByTestId('new-game'));
+    expect(calls).toEqual([]); // mid-game: asks for confirmation first
+    fireEvent.click(screen.getByText('HỦY'));
+    expect(calls).toEqual([]);
+    fireEvent.click(screen.getByTestId('new-game'));
+    fireEvent.click(screen.getByText('VÁN MỚI'));
     expect(calls).toEqual(['newGame']);
   });
 });

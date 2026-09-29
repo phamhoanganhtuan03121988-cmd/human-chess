@@ -61,7 +61,7 @@ const clickMarker = (x: number, y: number) =>
 
 describe('movement animation (UI)', () => {
   it('animates the piece from its source to its destination, then commits', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(img(4, 6)!);
     clickMarker(4, 5);
 
@@ -78,9 +78,9 @@ describe('movement animation (UI)', () => {
     expect(screen.queryByTestId('ring-last-move')).toBeNull(); // not before arrival
     expect(screen.queryAllByTestId('move-marker')).toHaveLength(0);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
-    expect(status()).toBe('RED MOVING'); // in transit, turn not passed yet
+    expect(status()).toBe('ĐỎ ĐANG ĐI'); // in transit, turn not passed yet
     expect(locked()).toBe(true);
-    expect((screen.getByText('New game') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('new-game') as HTMLButtonElement).disabled).toBe(true);
 
     advance(220);
     expect(pieceAt(4, 6)).toBe('red pawn'); // still travelling
@@ -91,7 +91,7 @@ describe('movement animation (UI)', () => {
     expect(moving()).toHaveLength(0);
     const to = screen.getByTestId('ring-last-move');
     expect(`${to.dataset.x},${to.dataset.y}`).toBe('4,5');
-    expect(status()).toBe('BLUE THINKING...');
+    expect(status()).toBe('XANH ĐANG NGHĨ...');
   });
 
   it('ignores clicks, double clicks and Escape during the animation', () => {
@@ -110,7 +110,7 @@ describe('movement animation (UI)', () => {
     advance(300);
     expect(ply()).toBe('1');
     expect(pieceAt(4, 5)).toBe('red pawn');
-    expect(status()).toBe('BLUE TURN');
+    expect(status()).toBe('LƯỢT XANH');
   });
 
   it('the AI waits for the animation, then its own normal move animates before committing', () => {
@@ -133,9 +133,9 @@ describe('movement animation (UI)', () => {
     fireEvent.click(img(0, 6)!);
     clickMarker(0, 5);
     advance(200);
-    expect(status()).toBe('RED TURN'); // AI not thinking yet
+    expect(status()).toBe('LƯỢT ĐỎ'); // AI not thinking yet
     advance(100);
-    expect(status()).toBe('BLUE THINKING...');
+    expect(status()).toBe('XANH ĐANG NGHĨ...');
     advance(AI_THINK_DELAY_MS + 40);
     expect(screen.queryByTestId('combat-overlay')).toBeNull();
     // The AI move is in transit: board unchanged, piece marked as moving.
@@ -146,7 +146,7 @@ describe('movement animation (UI)', () => {
     advance(300);
     expect(moving()).toHaveLength(0);
     expect(ply()).toBe('2');
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
     advance(5000);
     expect(ply()).toBe('2'); // AI does not move twice
   });
@@ -198,9 +198,9 @@ describe('movement animation (UI)', () => {
     );
     fireEvent.click(img(0, 5)!);
     clickMarker(0, 0);
-    expect(status()).toBe('RED TURN'); // not over until the move commits
+    expect(status()).toBe('LƯỢT ĐỎ'); // not over until the move commits
     advance(300);
-    expect(status()).toBe('CHECKMATE — RED WINS');
+    expect(status()).toBe('CHIẾU BÍ — ĐỎ THẮNG');
     fireEvent.click(img(3, 0)!);
     fireEvent.click(img(8, 1)!);
     expect(moving()).toHaveLength(0);

@@ -14,7 +14,7 @@ export const VOLUME = {
   combatCue: 0.18,
   hover: 0.08,
   /** Room tone; barely audible. */
-  ambience: 0.035,
+  ambience: 0.022,
 } as const;
 
 export const MUTE_STORAGE_KEY = 'human-chess:sound-muted';
@@ -60,4 +60,49 @@ export function subscribeMute(listener: (muted: boolean) => void): () => void {
 export function reloadMutePreference(): void {
   muted = readStored();
   for (const l of listeners) l(muted);
+}
+
+// ---- Master volume (0–1), persisted -------------------------------------
+
+export const VOLUME_STORAGE_KEY = 'human-chess:sound-volume';
+export const DEFAULT_VOLUME = 0.8;
+
+function readVolume(): number {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(VOLUME_STORAGE_KEY) : null;
+    const v = raw === null ? NaN : Number(raw);
+    return Number.isFinite(v) && v >= 0 && v <= 1 ? v : DEFAULT_VOLUME;
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+}
+
+let volume = readVolume();
+const volumeListeners = new Set<(v: number) => void>();
+
+export function getVolume(): number {
+  return volume;
+}
+
+export function setVolume(next: number): void {
+  const v = Math.min(1, Math.max(0, Number.isFinite(next) ? next : DEFAULT_VOLUME));
+  if (v === volume) return;
+  volume = v;
+  try {
+    localStorage.setItem(VOLUME_STORAGE_KEY, String(v));
+  } catch {
+    /* ignore */
+  }
+  for (const l of volumeListeners) l(volume);
+}
+
+export function subscribeVolume(listener: (v: number) => void): () => void {
+  volumeListeners.add(listener);
+  return () => volumeListeners.delete(listener);
+}
+
+/** Re-reads the stored volume (tests / reload simulation). */
+export function reloadVolumePreference(): void {
+  volume = readVolume();
+  for (const l of volumeListeners) l(volume);
 }

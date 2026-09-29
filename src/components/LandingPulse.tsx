@@ -10,8 +10,9 @@ const SIZE = 0.9;
 /**
  * Small radial pulse on the intersection where a piece just landed.
  * Mount with a fresh key per move; it removes itself after the animation.
+ * The crimson capture variant marks a capture played without the combat scene (replay).
  */
-export function LandingPulse({ at }: { at: Position }) {
+export function LandingPulse({ at, capture = false }: { at: Position; capture?: boolean }) {
   const [alive, setAlive] = useState(true);
   useEffect(() => {
     const t = window.setTimeout(() => setAlive(false), LANDING_PULSE_MS);
@@ -21,7 +22,7 @@ export function LandingPulse({ at }: { at: Position }) {
   return (
     <BoardAnchor x={at.x} y={at.y}>
       <span
-        className="landing-pulse"
+        className={capture ? 'landing-pulse landing-pulse--capture' : 'landing-pulse'}
         data-testid="landing-pulse"
         data-x={at.x}
         data-y={at.y}

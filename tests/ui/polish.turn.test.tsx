@@ -93,23 +93,23 @@ describe('turn feedback', () => {
           ...K.....`)}
       />,
     );
-    expect(status().textContent).toBe('RED TURN');
+    expect(status().textContent).toBe('LƯỢT ĐỎ');
     expect(status().dataset.activity).toBe('idle');
-    expect(hint()).toBe('Your move');
+    expect(hint()).toBe('Đến lượt bạn');
     expect(frame()).toContain('board-frame--turn-red');
     expect(frame()).not.toContain('board-frame--waiting');
 
     fireEvent.click(img(0, 6)!);
     fireEvent.click(screen.getByTestId('move-marker'));
-    expect(status().textContent).toBe('RED MOVING');
-    expect(hint()).toBe('Moving…');
+    expect(status().textContent).toBe('ĐỎ ĐANG ĐI');
+    expect(hint()).toBe('Đang di chuyển…');
     expect(frame()).toContain('board-frame--waiting');
     expect(frame()).toContain('board-frame--locked');
 
     advance(300);
-    expect(status().textContent).toBe('BLUE THINKING...');
+    expect(status().textContent).toBe('XANH ĐANG NGHĨ...');
     expect(status().className).toContain('status--blue');
-    expect(hint()).toBe('Please wait — Blue is thinking');
+    expect(hint()).toBe('Chờ chút — Xanh đang nghĩ');
     expect(screen.getByTestId('status-hint').className).toContain('status-hint--wait');
     expect(frame()).toContain('board-frame--turn-blue');
     expect(frame()).toContain('board-frame--waiting');
@@ -118,14 +118,14 @@ describe('turn feedback', () => {
     expect(screen.queryByTestId('ring-selected')).toBeNull();
 
     advance(AI_THINK_DELAY_MS + 40);
-    expect(status().textContent).toBe('BLUE MOVING');
-    expect(hint()).toBe('Please wait — Blue is moving');
+    expect(status().textContent).toBe('XANH ĐANG ĐI');
+    expect(hint()).toBe('Chờ chút — Xanh đang đi');
     fireEvent.click(img(0, 5)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
 
     advance(300);
-    expect(status().textContent).toBe('RED TURN');
-    expect(hint()).toBe('Your move');
+    expect(status().textContent).toBe('LƯỢT ĐỎ');
+    expect(hint()).toBe('Đến lượt bạn');
     expect(frame()).toContain('board-frame--turn-red');
     expect(frame()).not.toContain('board-frame--waiting');
   });
@@ -142,15 +142,15 @@ describe('turn feedback', () => {
   });
 
   it('combat stays dominant: status says who attacks, input locked', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
-    expect(status().textContent).toBe('RED ATTACKS');
+    expect(status().textContent).toBe('ĐỎ TẤN CÔNG');
     expect(status().dataset.activity).toBe('combat');
-    expect(hint()).toBe('Battle in progress…');
+    expect(hint()).toBe('Đang giao chiến…');
     expect(screen.getByTestId('combat-overlay')).toBeTruthy();
     expect(frame()).toContain('board-frame--waiting');
-    expect((screen.getByText('New game') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('new-game') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('check shows RED IN CHECK with an urgent hint', () => {
@@ -169,9 +169,9 @@ describe('turn feedback', () => {
           ....K....`)}
       />,
     );
-    expect(status().textContent).toBe('RED IN CHECK');
+    expect(status().textContent).toBe('ĐỎ BỊ CHIẾU');
     expect(status().className).toContain('status--check');
-    expect(hint()).toBe('Protect your General!');
+    expect(hint()).toBe('Bảo vệ Tướng!');
   });
 
   it('game over: result text, no turn edge, and a game-over hint', () => {
@@ -193,8 +193,8 @@ describe('turn feedback', () => {
         )}
       />,
     );
-    expect(status().textContent).toBe('CHECKMATE — RED WINS');
-    expect(hint()).toBe('Game over — start a new game');
+    expect(status().textContent).toBe('CHIẾU BÍ — ĐỎ THẮNG');
+    expect(hint()).toBe('Ván đã kết thúc');
     expect(frame()).not.toMatch(/board-frame--turn-/);
     expect(frame()).not.toContain('board-frame--waiting');
   });

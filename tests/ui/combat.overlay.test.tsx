@@ -43,7 +43,7 @@ const portrait = (role: 'attacker' | 'defender') =>
 
 describe('combat overlay: Red Cannon captures Blue Knight', () => {
   it('runs the full capture flow', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     clickPiece(1, 7); // 1. select red cannon
     expect(screen.getAllByTestId('ring-capture').map((r) => `${r.dataset.x},${r.dataset.y}`)).toEqual(['1,0']); // 2.
     clickPiece(1, 0); // 3. click blue knight
@@ -53,8 +53,8 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     expect(document.querySelector('.board-frame--locked')).not.toBeNull();
     expect(pieceAt(1, 0)).toBe('blue knight');
     expect(pieceAt(1, 7)).toBe('red cannon');
-    expect(status()).toBe('RED ATTACKS'); // combat in progress, nothing applied yet
-    expect(screen.getByTestId('status-hint').textContent).toBe('Battle in progress…');
+    expect(status()).toBe('ĐỎ TẤN CÔNG'); // combat in progress, nothing applied yet
+    expect(screen.getByTestId('status-hint').textContent).toBe('Đang giao chiến…');
 
     // 6-7. portraits from the manifest for the actual pieces
     expect(portrait('attacker')).toBe('/assets/portraits/red/cannon.png');
@@ -89,7 +89,7 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     expect(pieceAt(1, 0)).toBe('red cannon');
     expect(pieceAt(1, 7)).toBeNull();
     expect(screen.getAllByTestId('piece')).toHaveLength(31);
-    expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue
+    expect(status()).toBe('XANH ĐANG NGHĨ...'); // App: AI plays Blue
     expect(document.querySelector('.board-frame--locked')).not.toBeNull(); // locked while AI thinks
     const to = screen.getByTestId('ring-last-move');
     expect(`${to.dataset.x},${to.dataset.y}`).toBe('1,0');
@@ -98,12 +98,12 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     advance(800);
     if (overlay()) advance(1600);
     expect(overlay()).toBeNull();
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('LƯỢT ĐỎ');
     expect(document.querySelector('.board-frame--locked')).toBeNull();
   });
 
   it('locks board interaction and ignores Escape during combat', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     clickPiece(1, 7);
     clickPiece(1, 0);
     advance(500);
@@ -112,7 +112,7 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     });
-    fireEvent.click(screen.getByText('New game'));
+    fireEvent.click(screen.getByTestId('new-game'));
     expect(overlay()).not.toBeNull();
     expect(screen.queryByTestId('ring-selected')).toBeNull();
     expect(screen.queryAllByTestId('move-marker')).toHaveLength(0);
@@ -120,13 +120,13 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     advance(1100);
     expect(overlay()).toBeNull();
     expect(pieceAt(1, 0)).toBe('red cannon');
-    expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue
+    expect(status()).toBe('XANH ĐANG NGHĨ...'); // App: AI plays Blue
   });
 });
 
 describe('combat overlay: normal movement', () => {
   it('moving to an empty point never shows portraits', () => {
-    render(<App />);
+    render(<App initialScreen="game" />);
     clickPiece(4, 6);
     fireEvent.click(screen.getByTestId('move-marker'));
     expect(overlay()).toBeNull();
@@ -134,7 +134,7 @@ describe('combat overlay: normal movement', () => {
     expect(overlay()).toBeNull();
     expect(document.querySelector('[data-testid$="-portrait"]')).toBeNull();
     expect(pieceAt(4, 5)).toBe('red pawn');
-    expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue
+    expect(status()).toBe('XANH ĐANG NGHĨ...'); // App: AI plays Blue
   });
 });
 
@@ -234,7 +234,7 @@ describe('combat overlay: other captures', () => {
       expect(overlay()).toBeNull();
       expect(pieceAt(...c.to)).toBe(`${aSide} ${aType}`);
       expect(pieceAt(...c.from)).toBeNull();
-      expect(status()).toBe(`${dSide.toUpperCase()} TURN`);
+      expect(status()).toBe(`LƯỢT ${dSide === 'red' ? 'ĐỎ' : 'XANH'}`);
     });
   }
 });

@@ -74,7 +74,7 @@ export function CombatOverlay({ combat, dispatch }: CombatOverlayProps) {
       style={{ '--fx-flash': profile.flash } as CSSProperties}
       role="dialog"
       aria-modal="true"
-      aria-label="Combat"
+      aria-label="Giao chiến"
       data-testid="combat-overlay"
       data-phase={combat.phase}
       data-stage={stage}
