@@ -28,7 +28,8 @@ interface Layout {
 /**
  * Chooses a spot that never covers the board: the empty gutter left of the
  * board when it is wide enough (desktop, tablet, phone landscape), else the
- * move panel's area, else the space below the board.
+ * area of a move panel beside the board, else a compact row below the board
+ * (phones in portrait).
  */
 function measure(): Layout {
   const frame = document.querySelector('[data-testid="board-frame"]')?.getBoundingClientRect();
@@ -42,7 +43,8 @@ function measure(): Layout {
     };
   }
   const panel = document.querySelector('[data-testid="side-panel"]')?.getBoundingClientRect();
-  if (panel && panel.width > 0) {
+  // Only a panel beside the board (not one stacked under it in portrait).
+  if (panel && panel.width > 0 && panel.top < frame.bottom) {
     return { placement: 'panel', style: { top: panel.top, left: panel.left, width: panel.width, maxHeight: panel.height } };
   }
   const below = window.innerHeight - frame.bottom - GAP;

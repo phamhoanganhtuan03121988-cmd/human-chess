@@ -343,9 +343,10 @@ describe('HUD', () => {
     expect(screen.queryByText('Debug')).toBeNull();
   });
 
-  it('shows the rotate hint element for portrait phones (CSS-driven)', () => {
+  it('never asks to rotate the phone: portrait is a playable layout', () => {
     render(<App />);
-    expect(document.querySelector('.rotate-hint')!.textContent).toContain('Xoay điện thoại sang ngang để chơi');
+    expect(document.querySelector('.rotate-hint')).toBeNull();
+    expect(document.body.textContent).not.toContain('Xoay điện thoại');
   });
 });
 

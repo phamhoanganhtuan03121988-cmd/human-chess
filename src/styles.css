@@ -1398,32 +1398,6 @@ img { -webkit-user-drag: none; }
   animation-duration: 260ms;
 }
 
-/* Rotate hint: phones held upright. ------------------------------------------ */
-.rotate-hint { display: none; }
-@media (orientation: portrait) and (max-width: 600px) {
-  .rotate-hint {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 24px;
-    text-align: center;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--gold-hi);
-    background: radial-gradient(ellipse at 50% 45%, #3a2c1e, #16110b 75%);
-  }
-  .rotate-hint__icon { font-size: 56px; animation: rotate-nudge 2.4s ease-in-out infinite; }
-  .app, .modal-backdrop, .combat-overlay { visibility: hidden; }
-}
-@keyframes rotate-nudge {
-  0%, 30% { transform: rotate(0deg); }
-  60%, 100% { transform: rotate(-90deg); }
-}
 
 /* Touch devices: comfortable targets (40–44 px) within the compact toolbar. */
 @media (pointer: coarse) {
@@ -1441,7 +1415,7 @@ img { -webkit-user-drag: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .modal-backdrop, .modal, .start-screen .modal, .hud__menu, .side-panel, .rotate-hint__icon, .captures__token { animation: none; }
+  .modal-backdrop, .modal, .start-screen .modal, .hud__menu, .side-panel, .captures__token { animation: none; }
   .start-screen, .start-screen .modal { transition: none; }
   .btn, .toolbar__button, .game-over__button, .segmented__item { transition: none; }
   .btn:active, .toolbar__button:active, .game-over__button:active, .segmented__item:active { transform: none; }
@@ -1671,10 +1645,25 @@ img { -webkit-user-drag: none; }
 .move-diagram__piece { fill: var(--card-accent); stroke: var(--gold-hi); stroke-width: 3; }
 /* Over the move panel, or below the board: horizontal and compact. */
 .character-card--panel .character-card__portrait { max-height: 150px; }
-.character-card--below { flex-direction: row; flex-wrap: wrap; align-items: stretch; }
-.character-card--below .character-card__head { flex: 1 1 100%; }
-.character-card--below .character-card__portrait { flex: none; width: 72px; min-height: 0; height: 96px; }
-.character-card--below .character-card__body { flex: 1; min-width: 0; }
+/* Below the board (phones in portrait): one compact row, thumbnail on the left. */
+.character-card--below {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas: 'portrait head' 'portrait body';
+  align-content: start;
+  column-gap: 10px;
+  row-gap: 4px;
+  padding: 8px;
+}
+.character-card--below .character-card__head { grid-area: head; gap: 8px; }
+.character-card--below .character-card__head .piece-token { --token: 26px !important; }
+.character-card--below .character-card__title { font-size: 13px; }
+.character-card--below .character-card__glyph { font-size: 22px; }
+.character-card--below .character-card__portrait { grid-area: portrait; width: 72px; height: 96px; min-height: 0; aspect-ratio: auto; }
+.character-card--below .character-card__body { grid-area: body; min-width: 0; gap: 3px; }
+.character-card--below .character-card__name { font-size: 13px; }
+.character-card--below .character-card__rule p { font-size: 11.5px; line-height: 1.35; }
+.character-card--below .move-diagram { width: 34px; height: 34px; }
 @media (max-height: 460px) {
   .character-card { padding: 8px; gap: 6px; }
   .character-card__rule p { font-size: 11px; }
@@ -1695,4 +1684,17 @@ img { -webkit-user-drag: none; }
 @keyframes check-wave {
   0% { opacity: 0.9; transform: scale(0.7); }
   100% { opacity: 0; transform: scale(1.25); }
+}
+
+/* Phones in portrait: the board spans the width; the optional move panel
+   stacks under the board instead of beside it (never shrinks the board). */
+@media (orientation: portrait) and (max-width: 700px) {
+  .app { --side-w: 0px !important; justify-content: flex-start; padding-top: 12px; }
+  .game-layout { grid-auto-flow: row; width: 100%; justify-items: center; }
+  .side-panel { width: min(100%, calc(100vw - 32px)); height: 180px; min-height: 0; }
+}
+/* Narrow screens: the replay controls wrap onto two centered rows. */
+@media (max-width: 560px) {
+  .toolbar--replay { flex-wrap: wrap; justify-content: center; row-gap: 6px; max-width: calc(100vw - 32px); }
+  .toolbar--replay .replay__title { flex: 1 1 100%; text-align: center; }
 }

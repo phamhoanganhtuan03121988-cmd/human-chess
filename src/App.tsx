@@ -198,12 +198,6 @@ export function App({ initialScreen = 'start' }: AppProps) {
           }}
         />
       )}
-      <div className="rotate-hint" role="note">
-        <div className="rotate-hint__icon" aria-hidden="true">
-          ⟲
-        </div>
-        <p>Xoay điện thoại sang ngang để chơi</p>
-      </div>
     </>
   );
 }
