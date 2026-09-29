@@ -50,9 +50,11 @@ const advance = (ms: number) => {
 };
 const overlay = () => screen.queryByTestId('combat-overlay');
 const locked = () => document.querySelector('.board-frame--locked') !== null;
+/** Red pawn forward, including its 240 ms movement animation. */
 const humanPawnMove = () => {
   fireEvent.click(img(4, 6)!);
   fireEvent.click(screen.getByTestId('move-marker'));
+  advance(300);
 };
 
 describe('AI game flow (UI)', () => {
@@ -74,10 +76,12 @@ describe('AI game flow (UI)', () => {
     fireEvent.click(img(0, 9)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
 
-    advance(AI_THINK_DELAY_MS - 50);
+    // humanPawnMove already spent ~60 ms of the AI delay after the move committed.
+    advance(AI_THINK_DELAY_MS - 150);
     expect(status()).toBe('BLUE THINKING...'); // still presenting the delay
-    advance(100);
-    if (overlay()) advance(1600); // an AI capture would play the combat first
+    advance(200);
+    if (overlay()) advance(1600); // an AI capture plays the combat first…
+    else advance(300); // …a normal AI move animates first
     expect(status()).toBe('RED TURN');
     expect(locked()).toBe(false);
     expect((screen.getByText('New game') as HTMLButtonElement).disabled).toBe(false);
@@ -187,6 +191,7 @@ describe('AI game flow (UI)', () => {
     );
     advance(AI_THINK_DELAY_MS + 50);
     if (overlay()) advance(1600);
+    else advance(300); // mating move animates before it is applied
     expect(status()).toMatch(/— BLUE WINS$/);
     advance(5000);
     expect(screen.getByTestId('ply').textContent).toBe('1');

@@ -292,13 +292,17 @@ describe('audio hooks (no-op by default)', () => {
     // Rook to (0,4): normal move.
     fireEvent.click(img(0, 5)!);
     fireEvent.click(screen.getAllByTestId('move-marker').find((m) => m.dataset.x === '0' && m.dataset.y === '4')!);
+    expect(calls).toEqual([]); // still animating: nothing applied yet
+    advance(300);
     expect(calls).toEqual(['move']);
     // Blue general steps aside, then Red mates with a capture-free move.
     fireEvent.click(img(3, 0)!);
     fireEvent.click(screen.getAllByTestId('move-marker').find((m) => m.dataset.x === '4' && m.dataset.y === '0')!);
+    advance(300);
     expect(calls).toEqual(['move', 'move']);
     fireEvent.click(img(8, 1)!);
     fireEvent.click(screen.getAllByTestId('move-marker').find((m) => m.dataset.x === '8' && m.dataset.y === '0')!);
+    advance(300);
     expect(calls.slice(2)).toEqual(['move', 'check']);
   });
 

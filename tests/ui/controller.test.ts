@@ -10,7 +10,9 @@ import {
 import type { UiState } from '../../src/game/controller.ts';
 import { position } from '../engine/helpers.ts';
 
-const click = (s: UiState, x: number, y: number) => handleClick(s, { x, y });
+/** Normal moves animate first; finish the animation so the engine applies them. */
+const settle = (s: UiState) => (s.movement ? uiReducer(s, { type: 'movementComplete', id: s.movement.id }) : s);
+const click = (s: UiState, x: number, y: number) => settle(handleClick(s, { x, y }));
 /** Captures open a combat first; finish it so the engine applies the move. */
 const finishCombat = (s: UiState) => (s.combat ? uiReducer(s, { type: 'combatComplete', id: s.combat.id }) : s);
 const dests = (s: UiState) => s.legalMoves.map((m) => `${m.to.x},${m.to.y}`).sort();

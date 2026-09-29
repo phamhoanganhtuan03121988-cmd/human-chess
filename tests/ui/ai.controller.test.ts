@@ -4,10 +4,12 @@ import { createUiState, getAiState, getStatusView, handleClick, uiReducer } from
 import type { UiState } from '../../src/game/controller.ts';
 import { position } from '../engine/helpers.ts';
 
-const click = (s: UiState, x: number, y: number) => handleClick(s, { x, y });
+/** Normal moves animate first; finish the animation so the engine applies them. */
+const settle = (s: UiState) => (s.movement ? uiReducer(s, { type: 'movementComplete', id: s.movement.id }) : s);
+const click = (s: UiState, x: number, y: number) => settle(handleClick(s, { x, y }));
 const vsAi = () => createUiState(undefined, { aiSide: 'blue' });
 const aiMove = (s: UiState, move = chooseMove(s.game)!.move) =>
-  uiReducer(s, { type: 'aiMove', gameId: s.gameId, ply: s.game.history.length, move });
+  settle(uiReducer(s, { type: 'aiMove', gameId: s.gameId, ply: s.game.history.length, move }));
 
 describe('AI game flow (controller)', () => {
   it('Red starts; the AI is idle until the human moves', () => {

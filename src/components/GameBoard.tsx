@@ -4,11 +4,13 @@ import { findGeneral, pieceAt } from '../engine/index.ts';
 import type { Position } from '../engine/index.ts';
 import { PIECE_HEADROOM } from '../config/pieceSprites.ts';
 import type { UiAction, UiState } from '../game/controller.ts';
-import { getAiState, getPlacements, isCaptureTarget } from '../game/controller.ts';
+import { getAiState, getPlacements, isCaptureTarget, isPresenting } from '../game/controller.ts';
 import { isGameOver } from '../engine/index.ts';
 import { Board } from './Board.tsx';
 import { getImpactProfile } from './combat/combatFx.ts';
 import { useReducedMotion } from './combat/useReducedMotion.ts';
+import { getMoveDuration, getMovementStyle } from './animation/movement.ts';
+import { useMovementDriver } from './animation/useMovementDriver.ts';
 import { GroundLayer } from './GroundLayer.tsx';
 import { MoveMarkers } from './MoveMarkers.tsx';
 import { PieceLayer } from './PieceLayer.tsx';
@@ -26,6 +28,7 @@ interface GameBoardProps {
 export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
   const [hovered, setHovered] = useState<Position | null>(null);
   const reducedMotion = useReducedMotion();
+  useMovementDriver(ui.movement, dispatch, reducedMotion);
   const { game, selected, legalMoves, lastMove } = ui;
 
   const placements = getPlacements(game);
@@ -47,7 +50,7 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
       shakePx={shakePx}
       debug={debug}
       headroom={PIECE_HEADROOM}
-      interactive={!isGameOver(game) && !ui.combat && getAiState(ui) === 'idle'}
+      interactive={!isGameOver(game) && !isPresenting(ui) && getAiState(ui) === 'idle'}
       onBackgroundClick={() => dispatch({ type: 'clearSelection' })}
     >
       <GroundLayer
@@ -64,6 +67,12 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
         captureTargets={captureTargets}
         onHoverChange={setHovered}
         onClickPiece={click}
+        moving={
+          ui.movement
+            ? { from: ui.movement.move.from, style: getMovementStyle(ui.movement.move, getMoveDuration(reducedMotion)) }
+            : null
+        }
+        landedAt={lastMove?.to ?? null}
         debug={debug}
       />
       <MoveMarkers targets={emptyTargets} onSelectTarget={click} />

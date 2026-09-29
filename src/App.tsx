@@ -3,7 +3,7 @@ import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { GameBoard } from './components/GameBoard.tsx';
 import { StatusPanel } from './components/StatusPanel.tsx';
 import { isBoardDebugEnabled } from './config/debug.ts';
-import { createUiState, getAiState, getStatusView, uiReducer } from './game/controller.ts';
+import { createUiState, getAiState, getStatusView, isPresenting, uiReducer } from './game/controller.ts';
 import { useAiOpponent } from './game/useAiOpponent.ts';
 import { useGameAudio } from './game/useGameAudio.ts';
 
@@ -32,7 +32,7 @@ export function App() {
         <button
           type="button"
           className="toolbar__button"
-          disabled={ui.combat !== null || aiState === 'thinking'}
+          disabled={isPresenting(ui) || aiState === 'thinking'}
           onClick={() => dispatch({ type: 'newGame' })}
         >
           New game

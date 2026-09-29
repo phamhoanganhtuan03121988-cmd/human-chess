@@ -4,7 +4,9 @@ import { createUiState, getCombatPhase, getPlacements, handleClick, uiReducer } 
 import type { UiState } from '../../src/game/controller.ts';
 import { getPieceDisplayName } from '../../src/config/pieceIdentity.ts';
 
-const click = (s: UiState, x: number, y: number) => handleClick(s, { x, y });
+/** Normal moves animate first; finish the animation so the engine applies them. */
+const settle = (s: UiState) => (s.movement ? uiReducer(s, { type: 'movementComplete', id: s.movement.id }) : s);
+const click = (s: UiState, x: number, y: number) => settle(handleClick(s, { x, y }));
 const capture = () => click(click(createUiState(), 1, 7), 1, 0); // red cannon x blue knight
 
 describe('combat state (controller)', () => {

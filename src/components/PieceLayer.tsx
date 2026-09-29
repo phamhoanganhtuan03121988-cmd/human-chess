@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { PiecePlacement } from '../board/initialPosition.ts';
 import type { Position } from '../engine/index.ts';
 import { BoardAnchor } from './BoardAnchor.tsx';
@@ -13,6 +14,10 @@ interface PieceLayerProps {
   captureTargets: readonly Position[];
   onHoverChange: (position: Position | null) => void;
   onClickPiece: (position: Position) => void;
+  /** Piece currently travelling (at its source) and its movement style. */
+  moving?: { from: Position; style: CSSProperties } | null;
+  /** Destination of the move that just committed (brief landing settle). */
+  landedAt?: Position | null;
   /** Show sprite outlines and anchor points (debug mode). */
   debug?: boolean;
 }
@@ -32,6 +37,8 @@ export function PieceLayer({
   captureTargets,
   onHoverChange,
   onClickPiece,
+  moving = null,
+  landedAt = null,
   debug = false,
 }: PieceLayerProps) {
   const interaction = (p: PiecePlacement) => ({
@@ -40,6 +47,8 @@ export function PieceLayer({
     capturable: at(captureTargets, p),
     onHoverChange: (on: boolean) => onHoverChange(on ? { x: p.x, y: p.y } : null),
     onSelect: () => onClickPiece({ x: p.x, y: p.y }),
+    motion: moving && eq(moving.from, p) ? moving.style : null,
+    landing: eq(landedAt, p),
   });
   const key = (p: PiecePlacement) => `${p.side}-${p.type}-${p.x},${p.y}`;
 

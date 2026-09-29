@@ -18,6 +18,8 @@ afterEach(() => {
 
 /** Runs the combat presentation to completion (captures apply after it). */
 const finishCombat = () => act(() => void vi.advanceTimersByTime(1600));
+/** Normal moves animate (240 ms) before the engine applies them. */
+const finishMove = () => act(() => void vi.advanceTimersByTime(300));
 
 function Harness({ game }: { game: GameState }) {
   const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState(game));
@@ -66,9 +68,11 @@ describe('GameBoard UI', () => {
   });
 
   it('clicking a legal marker moves the piece, switches turn and marks the last move', () => {
+    vi.useFakeTimers();
     render(<App />);
     fireEvent.click(pieceImg(4, 6)!);
     fireEvent.click(markers()[0]!);
+    finishMove();
     expect(pieceImg(4, 6)).toBeNull();
     expect(pieceImg(4, 5)?.dataset).toMatchObject({ side: 'red', type: 'pawn' });
     expect(status()).toBe('BLUE THINKING...'); // App plays Blue with the AI
@@ -133,6 +137,7 @@ describe('GameBoard UI', () => {
   });
 
   it('shows CHECK and a glow on the checked general', () => {
+    vi.useFakeTimers();
     render(
       <Harness
         game={position(`
@@ -151,12 +156,14 @@ describe('GameBoard UI', () => {
     );
     fireEvent.click(pieceImg(0, 5)!);
     fireEvent.click(markers().find((m) => m.dataset.x === '4' && m.dataset.y === '5')!);
+    finishMove();
     expect(status()).toBe('BLUE IN CHECK');
     const ring = screen.getByTestId('ring-check');
     expect([ring.dataset.x, ring.dataset.y]).toEqual(['4', '0']);
   });
 
   it('checkmate shows the winner and blocks further interaction', () => {
+    vi.useFakeTimers();
     render(
       <Harness
         game={position(`
@@ -175,6 +182,7 @@ describe('GameBoard UI', () => {
     );
     fireEvent.click(pieceImg(0, 5)!);
     fireEvent.click(markers().find((m) => m.dataset.x === '0' && m.dataset.y === '0')!);
+    finishMove();
     expect(status()).toBe('CHECKMATE — RED WINS');
     fireEvent.click(pieceImg(3, 0)!);
     fireEvent.click(pieceImg(8, 1)!);

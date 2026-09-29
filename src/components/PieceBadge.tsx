@@ -19,7 +19,19 @@ interface PieceBadgeProps extends PieceInteraction {
  * top-center is the intersection, and the badge is offset down from it.
  * Hovering shows a tooltip with the Vietnamese name and character.
  */
-export function PieceBadge({ side, type, x, y, hovered, selected, capturable, onHoverChange, onSelect }: PieceBadgeProps) {
+export function PieceBadge({
+  side,
+  type,
+  x,
+  y,
+  hovered,
+  selected,
+  capturable,
+  onHoverChange,
+  onSelect,
+  motion,
+  landing,
+}: PieceBadgeProps) {
   const label = getPieceLabel(side, type);
   const size = `max(${boardUnits(BADGE_SIZE)}, ${BADGE_MIN_PX}px)`;
   // Bottom-rank tooltips open upward so they stay on the board.
@@ -34,7 +46,12 @@ export function PieceBadge({ side, type, x, y, hovered, selected, capturable, on
 
   return (
     <BoardAnchor x={x} y={y} anchorX={0.5} anchorY={0}>
-      <div className="piece-badge__slot" style={{ marginTop: boardUnits(BADGE_OFFSET) }}>
+      <div
+        className={['piece-badge__slot', motion && 'is-moving', landing && !motion && 'is-landing']
+          .filter(Boolean)
+          .join(' ')}
+        style={{ marginTop: boardUnits(BADGE_OFFSET), ...motion }}
+      >
         <button
           type="button"
           className={classes.filter(Boolean).join(' ')}
@@ -55,7 +72,7 @@ export function PieceBadge({ side, type, x, y, hovered, selected, capturable, on
         >
           {getPieceGlyph(side, type)}
         </button>
-        {hovered && (
+        {hovered && !motion && (
           <div
             className={`piece-tooltip piece-tooltip--${side} ${tooltipAbove ? 'piece-tooltip--above' : ''}`}
             role="tooltip"

@@ -27,6 +27,18 @@ export interface CombatState {
   readonly move: Move;
 }
 
+/**
+ * Movement animation for a normal (non-capture) move (UI only). While it
+ * runs the engine GameState is untouched; the move is applied with
+ * applyMove only when the animation completes.
+ */
+export interface MovementState {
+  /** Increments per movement; stale completions carry an old id. */
+  readonly id: number;
+  readonly piece: Piece;
+  readonly move: Move;
+}
+
 export interface UiState {
   readonly game: GameState;
   readonly selected: Position | null;
@@ -35,6 +47,8 @@ export interface UiState {
   readonly lastMove: Move | null;
   /** Active capture presentation; null when idle. Locks all board input. */
   readonly combat: CombatState | null;
+  /** Active normal-move animation; null when idle. Locks all board input. */
+  readonly movement: MovementState | null;
   /** Increments on every new game; stale AI results carry an old id. */
   readonly gameId: number;
   /** Side played by the computer, or null for two local players. */
@@ -54,6 +68,8 @@ export type UiAction =
   | { readonly type: 'newGame' }
   | { readonly type: 'combatPhase'; readonly id: number; readonly phase: 'impact' | 'complete' }
   | { readonly type: 'combatComplete'; readonly id: number }
+  /** The movement animation with this id reached its destination. */
+  | { readonly type: 'movementComplete'; readonly id: number }
   /**
    * A move chosen by the AI for the position identified by gameId + ply
    * (history length). Ignored if that position is no longer current.
@@ -69,6 +85,7 @@ export function createUiState(game: GameState = createInitialGameState(), option
     legalMoves: [],
     lastMove: null,
     combat: null,
+    movement: null,
     gameId: nextGameId++,
     aiSide: options.aiSide ?? null,
   };
@@ -76,14 +93,20 @@ export function createUiState(game: GameState = createInitialGameState(), option
 
 /**
  * The AI is thinking when it is the AI side's turn, the game is running and
- * no combat is being presented. Derived, so it can never get out of sync.
+ * no combat or movement is being presented. Derived, so it can never get out of sync.
  */
 export function getAiState(state: UiState): AiState {
-  const { game, aiSide, combat } = state;
-  return aiSide !== null && game.turn === aiSide && !combat && !isGameOver(game) ? 'thinking' : 'idle';
+  const { game, aiSide } = state;
+  return aiSide !== null && game.turn === aiSide && !isPresenting(state) && !isGameOver(game) ? 'thinking' : 'idle';
 }
 
 let nextCombatId = 1;
+let nextMovementId = 1;
+
+/** True while a capture combat or a movement animation is being presented. */
+export function isPresenting(state: UiState): boolean {
+  return state.combat !== null || state.movement !== null;
+}
 
 /** The phase of the current combat, or 'idle'. */
 export function getCombatPhase(state: UiState): CombatPhase {
@@ -109,7 +132,7 @@ function select(state: UiState, position: Position): UiState {
  * - anything else → clear selection
  */
 export function handleClick(state: UiState, position: Position): UiState {
-  if (state.combat) return state; // board is frozen during combat
+  if (isPresenting(state)) return state; // board is frozen during combat / movement
   if (state.aiSide !== null && state.game.turn === state.aiSide) return state; // AI's turn
   if (isGameOver(state.game)) return clearSelection(state);
 
@@ -126,22 +149,26 @@ export function handleClick(state: UiState, position: Position): UiState {
 
 /**
  * Plays a legal move for whoever is on turn (human or AI): captures open the
- * combat presentation first, other moves are applied immediately.
+ * combat presentation, other moves start the movement animation. Either way
+ * the engine applies the move only when the presentation completes.
  */
 function playMove(state: UiState, move: Move): UiState {
   const attacker = pieceAt(state.game.board, move.from);
   const defender = pieceAt(state.game.board, move.to);
-  if (attacker && defender) {
+  if (!attacker) return clearSelection(state);
+  if (defender) {
     // Capture: present the combat first; the engine applies it on completion.
     const combat: CombatState = { id: nextCombatId++, phase: 'entering', attacker, defender, move };
     return { ...state, selected: null, legalMoves: [], combat };
   }
-  return commitMove(state, move);
+  // Normal move: animate first; the engine applies it on completion.
+  const movement: MovementState = { id: nextMovementId++, piece: attacker, move };
+  return { ...state, selected: null, legalMoves: [], movement };
 }
 
 function commitMove(state: UiState, move: Move): UiState {
   const result = applyMove(state.game, move);
-  if (!result.ok) return { ...clearSelection(state), combat: null };
+  if (!result.ok) return { ...clearSelection(state), combat: null, movement: null };
   return {
     ...state,
     game: result.state,
@@ -149,6 +176,7 @@ function commitMove(state: UiState, move: Move): UiState {
     legalMoves: [],
     lastMove: { from: move.from, to: move.to },
     combat: null,
+    movement: null,
   };
 }
 
@@ -166,11 +194,11 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
     case 'click':
       return handleClick(state, action.position);
     case 'clearSelection':
-      // Escape etc. never cancel an active combat.
-      return state.combat ? state : clearSelection(state);
+      // Escape etc. never cancel an active combat or movement.
+      return isPresenting(state) ? state : clearSelection(state);
     case 'newGame':
-      // A new game id makes any pending AI result stale.
-      return state.combat ? state : createUiState(undefined, { aiSide: state.aiSide });
+      // Blocked while presenting; a new game id makes any pending AI result stale.
+      return isPresenting(state) ? state : createUiState(undefined, { aiSide: state.aiSide });
     case 'aiMove':
       return handleAiMove(state, action);
     case 'combatPhase':
@@ -180,6 +208,10 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       // Only now does the capture reach the engine. Stale or repeated completions are ignored.
       if (!state.combat || state.combat.id !== action.id) return state;
       return commitMove(state, state.combat.move);
+    case 'movementComplete':
+      // Only now does a normal move reach the engine. Stale or repeated completions are ignored.
+      if (!state.movement || state.movement.id !== action.id) return state;
+      return commitMove(state, state.movement.move);
   }
 }
 

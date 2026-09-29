@@ -129,6 +129,8 @@ describe('combat overlay: normal movement', () => {
     clickPiece(4, 6);
     fireEvent.click(screen.getByTestId('move-marker'));
     expect(overlay()).toBeNull();
+    advance(300); // movement animation, then the engine applies the move
+    expect(overlay()).toBeNull();
     expect(document.querySelector('[data-testid$="-portrait"]')).toBeNull();
     expect(pieceAt(4, 5)).toBe('red pawn');
     expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue

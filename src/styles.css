@@ -630,3 +630,43 @@ body { background: var(--page-bg); color: #f5f0e6; }
   .status--thinking .status__main { animation: none; }
 }
 .toolbar__button:disabled { opacity: 0.45; cursor: default; }
+
+/* ------------------------------------------------------------------ */
+/* Piece movement: the piece (and its badge) travel from the source    */
+/* intersection to the destination with transforms only.               */
+/* ------------------------------------------------------------------ */
+.piece__img { transform-origin: 50% 95%; }
+.piece__img.is-moving,
+.piece-badge__slot.is-moving {
+  /* `translate` carries the piece (ease-out); `transform` adds the slight lift. */
+  animation:
+    piece-travel var(--move-duration) var(--move-easing) both,
+    piece-lift var(--move-duration) linear both;
+}
+.piece__img.is-moving { filter: drop-shadow(0 0.6cqw 0.5cqw rgba(0, 0, 0, 0.35)); }
+.piece__img.is-landing,
+.piece-badge__slot.is-landing { animation: piece-land 80ms ease-out both; }
+
+@keyframes piece-travel {
+  from { translate: 0 0; }
+  to { translate: var(--move-x) var(--move-y); }
+}
+@keyframes piece-lift {
+  0% { transform: none; }
+  10% { transform: translateY(-2px) scale(1.015); }
+  80% { transform: translateY(-1.5px) scale(1.015); }
+  100% { transform: translateY(0) scale(1.015); }
+}
+@keyframes piece-land {
+  from { transform: scale(1.015); }
+  to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Near-instant: no travel animation, lift, shadow or settle. */
+  .piece__img.is-moving,
+  .piece-badge__slot.is-moving,
+  .piece__img.is-landing,
+  .piece-badge__slot.is-landing { animation: none; }
+  .piece__img.is-moving { filter: none; }
+}
