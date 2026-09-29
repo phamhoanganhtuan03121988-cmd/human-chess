@@ -1,0 +1,103 @@
+:root {
+  --page-bg: #2b2621;
+  --board-bg: #e8c98f;
+  --board-line: #5a3a1a;
+  --debug-point: #0a7cff;
+  --debug-palace: #d6249f;
+  --debug-river: rgba(0, 140, 255, 0.18);
+  --debug-center: #00a86b;
+  --red: #c62828;
+  --blue: #1565c0;
+  font-family: system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body { background: var(--page-bg); color: #f5f0e6; }
+
+.app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.dev-toolbar { display: flex; gap: 16px; font-size: 14px; }
+
+/*
+ * Board sizing: keeps the 9:10 aspect ratio (BOARD_WIDTH : BOARD_HEIGHT in
+ * layout.ts) and fits within the viewport on desktop, tablet and mobile
+ * landscape. Only the size changes; intersection positions are percentages.
+ */
+.board {
+  position: relative;
+  aspect-ratio: 9 / 10;
+  width: min(100%, calc((100dvh - 56px) * 0.9));
+  background: var(--board-bg);
+  border-radius: 1.2%;
+  container-type: inline-size;
+}
+
+.board__svg, .board__layer { position: absolute; inset: 0; width: 100%; height: 100%; }
+.board__layer { pointer-events: none; }
+
+.board__line { stroke: var(--board-line); stroke-width: 0.025; stroke-linecap: square; }
+.board__frame { fill: none; stroke: var(--board-line); stroke-width: 0.05; }
+.board__mark { fill: none; stroke: var(--board-line); stroke-width: 0.02; }
+.board__river-text {
+  fill: var(--board-line);
+  font-size: 0.42px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  opacity: 0.8;
+}
+
+/* Debug overlay (SVG, board units) */
+.debug__river { fill: var(--debug-river); }
+.debug__river-label { fill: var(--debug-point); font-size: 0.14px; font-weight: 600; }
+.debug__palace { stroke: var(--debug-palace); stroke-width: 0.05; stroke-dasharray: 0.12 0.06; }
+.debug__point { fill: var(--debug-point); }
+.debug__point--palace { fill: var(--debug-palace); }
+.debug__coord { fill: #102a43; font-size: 0.14px; font-family: ui-monospace, monospace; }
+.debug__center line { stroke: var(--debug-center); stroke-width: 0.03; }
+.debug__center circle { fill: var(--debug-center); }
+
+/* Anchors: the child's center sits exactly on the intersection. */
+.board-anchor { position: absolute; transform: translate(-50%, -50%); }
+
+/* TEMPORARY debug markers (not game pieces). Sized relative to board width. */
+.debug-marker {
+  position: relative;
+  width: 8cqw;
+  height: 8cqw;
+  border-radius: 50%;
+  border: 0.35cqw solid currentColor;
+  background: rgba(255, 255, 255, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.debug-marker--red { color: var(--red); }
+.debug-marker--blue { color: var(--blue); }
+.debug-marker__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.9cqw;
+  height: 0.9cqw;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+.debug-marker__label {
+  font-size: 1.3cqw;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  transform: translateY(1.6cqw);
+}
