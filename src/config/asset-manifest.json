@@ -18,5 +18,25 @@
       "cannon": "/assets/pieces/blue/cannon.png",
       "pawn": "/assets/pieces/blue/pawn.png"
     }
+  },
+  "portraits": {
+    "red": {
+      "general": "/assets/portraits/red/general.png",
+      "advisor": "/assets/portraits/red/advisor.png",
+      "elephant": "/assets/portraits/red/elephant.png",
+      "rook": "/assets/portraits/red/rook.png",
+      "knight": "/assets/portraits/red/knight.png",
+      "cannon": "/assets/portraits/red/cannon.png",
+      "pawn": "/assets/portraits/red/pawn.png"
+    },
+    "blue": {
+      "general": "/assets/portraits/blue/general.png",
+      "advisor": "/assets/portraits/blue/advisor.png",
+      "elephant": "/assets/portraits/blue/elephant.png",
+      "rook": "/assets/portraits/blue/rook.png",
+      "knight": "/assets/portraits/blue/knight.png",
+      "cannon": "/assets/portraits/blue/cannon.png",
+      "pawn": "/assets/portraits/blue/pawn.png"
+    }
   }
 }
