@@ -1,0 +1,87 @@
+import { describe, expect, it } from 'vitest';
+import { formatBoard } from '../../src/engine/index.ts';
+import { createUiState, getCombatPhase, getPlacements, handleClick, uiReducer } from '../../src/game/controller.ts';
+import type { UiState } from '../../src/game/controller.ts';
+import { getPieceDisplayName } from '../../src/config/pieceIdentity.ts';
+
+const click = (s: UiState, x: number, y: number) => handleClick(s, { x, y });
+const capture = () => click(click(createUiState(), 1, 7), 1, 0); // red cannon x blue knight
+
+describe('combat state (controller)', () => {
+  it('a capture opens combat without changing the engine state', () => {
+    const start = createUiState();
+    const s = click(click(start, 1, 7), 1, 0);
+    expect(s.combat).not.toBeNull();
+    expect(getCombatPhase(s)).toBe('entering');
+    expect(s.combat!.attacker).toEqual({ side: 'red', type: 'cannon' });
+    expect(s.combat!.defender).toEqual({ side: 'blue', type: 'knight' });
+    expect(s.combat!.move).toEqual({ from: { x: 1, y: 7 }, to: { x: 1, y: 0 } });
+    expect(s.game).toBe(start.game); // same GameState object: nothing applied
+    expect(s.selected).toBeNull();
+    expect(s.legalMoves).toEqual([]);
+  });
+
+  it('a normal move does not open combat', () => {
+    const s = click(click(createUiState(), 4, 6), 4, 5);
+    expect(s.combat).toBeNull();
+    expect(getCombatPhase(s)).toBe('idle');
+    expect(s.game.turn).toBe('blue');
+  });
+
+  it('phases advance without touching the engine state', () => {
+    const s = capture();
+    const impact = uiReducer(s, { type: 'combatPhase', id: s.combat!.id, phase: 'impact' });
+    const complete = uiReducer(impact, { type: 'combatPhase', id: s.combat!.id, phase: 'complete' });
+    expect(getCombatPhase(impact)).toBe('impact');
+    expect(getCombatPhase(complete)).toBe('complete');
+    expect(complete.game).toBe(s.game);
+  });
+
+  it('applies the capture only when combat completes', () => {
+    const s = capture();
+    const done = uiReducer(s, { type: 'combatComplete', id: s.combat!.id });
+    expect(done.combat).toBeNull();
+    expect(done.game.board[1]![0]).toEqual({ side: 'red', type: 'cannon' });
+    expect(done.game.board[1]![7]).toBeNull();
+    expect(getPlacements(done.game)).toHaveLength(31);
+    expect(done.game.turn).toBe('blue');
+    expect(done.lastMove).toEqual({ from: { x: 1, y: 7 }, to: { x: 1, y: 0 } });
+  });
+
+  it('locks all interaction during combat', () => {
+    const s = capture();
+    expect(click(s, 0, 9)).toBe(s); // select another red piece
+    expect(click(s, 4, 6)).toBe(s);
+    expect(click(s, 1, 2)).toBe(s); // blue piece
+    expect(uiReducer(s, { type: 'newGame' })).toBe(s);
+  });
+
+  it('Escape (clearSelection) does not cancel combat or corrupt state', () => {
+    const s = capture();
+    const after = uiReducer(s, { type: 'clearSelection' });
+    expect(after).toBe(s);
+    const done = uiReducer(after, { type: 'combatComplete', id: s.combat!.id });
+    expect(done.game.board[1]![0]).toEqual({ side: 'red', type: 'cannon' });
+  });
+
+  it('ignores stale or repeated completion events', () => {
+    const s = capture();
+    const id = s.combat!.id;
+    expect(uiReducer(s, { type: 'combatComplete', id: id + 999 })).toBe(s);
+    const done = uiReducer(s, { type: 'combatComplete', id });
+    const again = uiReducer(done, { type: 'combatComplete', id });
+    expect(again).toBe(done);
+    expect(formatBoard(again.game.board)).toBe(formatBoard(done.game.board));
+    expect(again.game.history).toHaveLength(1);
+  });
+
+  it('display names come from the central mapping with side-specific glyphs', () => {
+    expect(getPieceDisplayName('red', 'cannon')).toEqual({ name: 'PHÁO', glyph: '炮' });
+    expect(getPieceDisplayName('blue', 'knight')).toEqual({ name: 'MÃ', glyph: '馬' });
+    expect(getPieceDisplayName('red', 'general')).toEqual({ name: 'TƯỚNG', glyph: '帥' });
+    expect(getPieceDisplayName('blue', 'general')).toEqual({ name: 'TƯỚNG', glyph: '將' });
+    expect(getPieceDisplayName('red', 'pawn')).toEqual({ name: 'TỐT', glyph: '兵' });
+    expect(getPieceDisplayName('blue', 'pawn')).toEqual({ name: 'TỐT', glyph: '卒' });
+    expect(getPieceDisplayName('blue', 'elephant')).toEqual({ name: 'TƯỢNG', glyph: '象' });
+  });
+});

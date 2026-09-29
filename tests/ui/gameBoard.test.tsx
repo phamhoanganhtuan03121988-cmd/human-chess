@@ -1,16 +1,23 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App.tsx';
 import { getIntersectionPosition } from '../../src/board/layout.ts';
+import { CombatOverlay } from '../../src/components/combat/CombatOverlay.tsx';
 import { GameBoard } from '../../src/components/GameBoard.tsx';
 import { StatusPanel } from '../../src/components/StatusPanel.tsx';
 import type { GameState } from '../../src/engine/index.ts';
 import { createUiState, getStatusView, uiReducer } from '../../src/game/controller.ts';
 import { position } from '../engine/helpers.ts';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+/** Runs the combat presentation to completion (captures apply after it). */
+const finishCombat = () => act(() => void vi.advanceTimersByTime(1600));
 
 function Harness({ game }: { game: GameState }) {
   const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState(game));
@@ -18,6 +25,7 @@ function Harness({ game }: { game: GameState }) {
     <>
       <StatusPanel status={getStatusView(ui.game)} />
       <GameBoard ui={ui} dispatch={dispatch} />
+      {ui.combat && <CombatOverlay key={ui.combat.id} combat={ui.combat} dispatch={dispatch} />}
     </>
   );
 }
@@ -80,12 +88,14 @@ describe('GameBoard UI', () => {
   });
 
   it('marks captures with a ring and removes the captured piece', () => {
+    vi.useFakeTimers();
     render(<App />);
     fireEvent.click(pieceImg(1, 7)!); // red cannon
     const captureRings = screen.getAllByTestId('ring-capture');
     expect(captureRings.map((r) => `${r.dataset.x},${r.dataset.y}`)).toEqual(['1,0']);
     expect(markers().some((m) => m.dataset.x === '1' && m.dataset.y === '0')).toBe(false);
     fireEvent.click(pieceImg(1, 0)!); // click the blue knight to capture it
+    finishCombat();
     expect(pieceImg(1, 0)?.dataset).toMatchObject({ side: 'red', type: 'cannon' });
     expect(screen.getAllByTestId('piece')).toHaveLength(31);
   });
@@ -174,6 +184,7 @@ describe('GameBoard UI', () => {
   });
 
   it('displays the correct winner when a general is captured', () => {
+    vi.useFakeTimers();
     render(
       <Harness
         game={position(
@@ -195,6 +206,7 @@ describe('GameBoard UI', () => {
     );
     fireEvent.click(pieceImg(4, 5)!);
     fireEvent.click(pieceImg(4, 9)!);
+    finishCombat();
     expect(status()).toBe('BLUE WINSGeneral captured');
   });
 

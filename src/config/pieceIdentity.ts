@@ -45,3 +45,15 @@ export function getPieceGlyph(side: PieceSide, type: PieceType): string {
 export function getPieceLabel(side: PieceSide, type: PieceType): string {
   return `${PIECE_NAMES_VI[type]} — ${getPieceGlyph(side, type)}`;
 }
+
+export interface PieceDisplayName {
+  /** Vietnamese name, e.g. "PHÁO". */
+  readonly name: string;
+  /** Traditional character for this side, e.g. "炮". */
+  readonly glyph: string;
+}
+
+/** Central display name for a piece (badges, tooltips, combat cards). */
+export function getPieceDisplayName(side: PieceSide, type: PieceType): PieceDisplayName {
+  return { name: PIECE_NAMES_VI[type], glyph: getPieceGlyph(side, type) };
+}

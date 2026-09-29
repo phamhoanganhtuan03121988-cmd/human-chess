@@ -9,7 +9,23 @@
 import { FILES, RANKS } from '../board/geometry.ts';
 import type { PiecePlacement } from '../board/initialPosition.ts';
 import { applyMove, createInitialGameState, getLegalMoves, isGameOver, pieceAt } from '../engine/index.ts';
-import type { GameState, Move, Position } from '../engine/index.ts';
+import type { GameState, Move, Piece, Position } from '../engine/index.ts';
+
+/**
+ * Combat presentation for a capture (UI only, not part of the engine).
+ * While a combat is active the engine GameState is untouched; the capture is
+ * applied with applyMove only when the combat completes.
+ */
+export type CombatPhase = 'idle' | 'entering' | 'impact' | 'complete';
+
+export interface CombatState {
+  /** Increments per combat, so the presentation can key its timeline. */
+  readonly id: number;
+  readonly phase: Exclude<CombatPhase, 'idle'>;
+  readonly attacker: Piece;
+  readonly defender: Piece;
+  readonly move: Move;
+}
 
 export interface UiState {
   readonly game: GameState;
@@ -17,15 +33,26 @@ export interface UiState {
   /** Legal moves of the selected piece (from the engine). */
   readonly legalMoves: readonly Move[];
   readonly lastMove: Move | null;
+  /** Active capture presentation; null when idle. Locks all board input. */
+  readonly combat: CombatState | null;
 }
 
 export type UiAction =
   | { readonly type: 'click'; readonly position: Position }
   | { readonly type: 'clearSelection' }
-  | { readonly type: 'newGame' };
+  | { readonly type: 'newGame' }
+  | { readonly type: 'combatPhase'; readonly id: number; readonly phase: 'impact' | 'complete' }
+  | { readonly type: 'combatComplete'; readonly id: number };
 
 export function createUiState(game: GameState = createInitialGameState()): UiState {
-  return { game, selected: null, legalMoves: [], lastMove: null };
+  return { game, selected: null, legalMoves: [], lastMove: null, combat: null };
+}
+
+let nextCombatId = 1;
+
+/** The phase of the current combat, or 'idle'. */
+export function getCombatPhase(state: UiState): CombatPhase {
+  return state.combat?.phase ?? 'idle';
 }
 
 const same = (a: Position, b: Position) => a.x === b.x && a.y === b.y;
@@ -47,17 +74,21 @@ function select(state: UiState, position: Position): UiState {
  * - anything else → clear selection
  */
 export function handleClick(state: UiState, position: Position): UiState {
+  if (state.combat) return state; // board is frozen during combat
   if (isGameOver(state.game)) return clearSelection(state);
 
   if (state.selected) {
     if (same(state.selected, position)) return clearSelection(state);
     const move = state.legalMoves.find((m) => same(m.to, position));
     if (move) {
-      const result = applyMove(state.game, move);
-      if (result.ok) {
-        return { game: result.state, selected: null, legalMoves: [], lastMove: { from: move.from, to: move.to } };
+      const attacker = pieceAt(state.game.board, move.from);
+      const defender = pieceAt(state.game.board, move.to);
+      if (attacker && defender) {
+        // Capture: present the combat first; the engine applies it on completion.
+        const combat: CombatState = { id: nextCombatId++, phase: 'entering', attacker, defender, move };
+        return { ...state, selected: null, legalMoves: [], combat };
       }
-      return clearSelection(state);
+      return commitMove(state, move);
     }
   }
 
@@ -66,14 +97,34 @@ export function handleClick(state: UiState, position: Position): UiState {
   return clearSelection(state);
 }
 
+function commitMove(state: UiState, move: Move): UiState {
+  const result = applyMove(state.game, move);
+  if (!result.ok) return { ...clearSelection(state), combat: null };
+  return {
+    game: result.state,
+    selected: null,
+    legalMoves: [],
+    lastMove: { from: move.from, to: move.to },
+    combat: null,
+  };
+}
+
 export function uiReducer(state: UiState, action: UiAction): UiState {
   switch (action.type) {
     case 'click':
       return handleClick(state, action.position);
     case 'clearSelection':
-      return clearSelection(state);
+      // Escape etc. never cancel an active combat.
+      return state.combat ? state : clearSelection(state);
     case 'newGame':
-      return createUiState();
+      return state.combat ? state : createUiState();
+    case 'combatPhase':
+      if (!state.combat || state.combat.id !== action.id) return state;
+      return { ...state, combat: { ...state.combat, phase: action.phase } };
+    case 'combatComplete':
+      // Only now does the capture reach the engine. Stale or repeated completions are ignored.
+      if (!state.combat || state.combat.id !== action.id) return state;
+      return commitMove(state, state.combat.move);
   }
 }
 

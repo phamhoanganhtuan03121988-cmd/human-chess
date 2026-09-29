@@ -11,6 +11,8 @@ import type { UiState } from '../../src/game/controller.ts';
 import { position } from '../engine/helpers.ts';
 
 const click = (s: UiState, x: number, y: number) => handleClick(s, { x, y });
+/** Captures open a combat first; finish it so the engine applies the move. */
+const finishCombat = (s: UiState) => (s.combat ? uiReducer(s, { type: 'combatComplete', id: s.combat.id }) : s);
 const dests = (s: UiState) => s.legalMoves.map((m) => `${m.to.x},${m.to.y}`).sort();
 
 describe('game controller', () => {
@@ -73,7 +75,7 @@ describe('game controller', () => {
   });
 
   it('capturing removes the captured piece', () => {
-    const s = click(click(createUiState(), 1, 7), 1, 0); // cannon takes knight
+    const s = finishCombat(click(click(createUiState(), 1, 7), 1, 0)); // cannon takes knight
     expect(s.game.board[1]![0]).toEqual({ side: 'red', type: 'cannon' });
     expect(getPlacements(s.game)).toHaveLength(31);
     expect(getPlacements(s.game).filter((p) => p.side === 'blue' && p.type === 'knight')).toHaveLength(1);
@@ -159,7 +161,7 @@ describe('game controller', () => {
         'blue',
       ),
     );
-    const over = click(click(s, 4, 5), 4, 9);
+    const over = finishCombat(click(click(s, 4, 5), 4, 9));
     expect(getStatusView(over.game)).toEqual({ kind: 'over', winner: 'blue', reason: 'general_captured' });
   });
 
