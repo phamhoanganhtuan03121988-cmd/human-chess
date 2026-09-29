@@ -4,7 +4,7 @@ import { findGeneral, pieceAt } from '../engine/index.ts';
 import type { Position } from '../engine/index.ts';
 import { PIECE_HEADROOM } from '../config/pieceSprites.ts';
 import type { UiAction, UiState } from '../game/controller.ts';
-import { getPlacements, isCaptureTarget } from '../game/controller.ts';
+import { getAiState, getPlacements, isCaptureTarget } from '../game/controller.ts';
 import { isGameOver } from '../engine/index.ts';
 import { Board } from './Board.tsx';
 import { GroundLayer } from './GroundLayer.tsx';
@@ -39,7 +39,7 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
     <Board
       debug={debug}
       headroom={PIECE_HEADROOM}
-      interactive={!isGameOver(game) && !ui.combat}
+      interactive={!isGameOver(game) && !ui.combat && getAiState(ui) === 'idle'}
       onBackgroundClick={() => dispatch({ type: 'clearSelection' })}
     >
       <GroundLayer

@@ -8,8 +8,8 @@
  */
 import { FILES, RANKS } from '../board/geometry.ts';
 import type { PiecePlacement } from '../board/initialPosition.ts';
-import { applyMove, createInitialGameState, getLegalMoves, isGameOver, pieceAt } from '../engine/index.ts';
-import type { GameState, Move, Piece, Position } from '../engine/index.ts';
+import { applyMove, createInitialGameState, getLegalMoves, isGameOver, isLegalMove, pieceAt } from '../engine/index.ts';
+import type { GameState, Move, Piece, Position, Side } from '../engine/index.ts';
 
 /**
  * Combat presentation for a capture (UI only, not part of the engine).
@@ -35,6 +35,17 @@ export interface UiState {
   readonly lastMove: Move | null;
   /** Active capture presentation; null when idle. Locks all board input. */
   readonly combat: CombatState | null;
+  /** Increments on every new game; stale AI results carry an old id. */
+  readonly gameId: number;
+  /** Side played by the computer, or null for two local players. */
+  readonly aiSide: Side | null;
+}
+
+/** Whether the computer is currently choosing a move. */
+export type AiState = 'idle' | 'thinking';
+
+export interface UiOptions {
+  readonly aiSide?: Side | null;
 }
 
 export type UiAction =
@@ -42,10 +53,34 @@ export type UiAction =
   | { readonly type: 'clearSelection' }
   | { readonly type: 'newGame' }
   | { readonly type: 'combatPhase'; readonly id: number; readonly phase: 'impact' | 'complete' }
-  | { readonly type: 'combatComplete'; readonly id: number };
+  | { readonly type: 'combatComplete'; readonly id: number }
+  /**
+   * A move chosen by the AI for the position identified by gameId + ply
+   * (history length). Ignored if that position is no longer current.
+   */
+  | { readonly type: 'aiMove'; readonly gameId: number; readonly ply: number; readonly move: Move };
 
-export function createUiState(game: GameState = createInitialGameState()): UiState {
-  return { game, selected: null, legalMoves: [], lastMove: null, combat: null };
+let nextGameId = 1;
+
+export function createUiState(game: GameState = createInitialGameState(), options: UiOptions = {}): UiState {
+  return {
+    game,
+    selected: null,
+    legalMoves: [],
+    lastMove: null,
+    combat: null,
+    gameId: nextGameId++,
+    aiSide: options.aiSide ?? null,
+  };
+}
+
+/**
+ * The AI is thinking when it is the AI side's turn, the game is running and
+ * no combat is being presented. Derived, so it can never get out of sync.
+ */
+export function getAiState(state: UiState): AiState {
+  const { game, aiSide, combat } = state;
+  return aiSide !== null && game.turn === aiSide && !combat && !isGameOver(game) ? 'thinking' : 'idle';
 }
 
 let nextCombatId = 1;
@@ -75,21 +110,13 @@ function select(state: UiState, position: Position): UiState {
  */
 export function handleClick(state: UiState, position: Position): UiState {
   if (state.combat) return state; // board is frozen during combat
+  if (state.aiSide !== null && state.game.turn === state.aiSide) return state; // AI's turn
   if (isGameOver(state.game)) return clearSelection(state);
 
   if (state.selected) {
     if (same(state.selected, position)) return clearSelection(state);
     const move = state.legalMoves.find((m) => same(m.to, position));
-    if (move) {
-      const attacker = pieceAt(state.game.board, move.from);
-      const defender = pieceAt(state.game.board, move.to);
-      if (attacker && defender) {
-        // Capture: present the combat first; the engine applies it on completion.
-        const combat: CombatState = { id: nextCombatId++, phase: 'entering', attacker, defender, move };
-        return { ...state, selected: null, legalMoves: [], combat };
-      }
-      return commitMove(state, move);
-    }
+    if (move) return playMove(state, move);
   }
 
   const piece = pieceAt(state.game.board, position);
@@ -97,16 +124,41 @@ export function handleClick(state: UiState, position: Position): UiState {
   return clearSelection(state);
 }
 
+/**
+ * Plays a legal move for whoever is on turn (human or AI): captures open the
+ * combat presentation first, other moves are applied immediately.
+ */
+function playMove(state: UiState, move: Move): UiState {
+  const attacker = pieceAt(state.game.board, move.from);
+  const defender = pieceAt(state.game.board, move.to);
+  if (attacker && defender) {
+    // Capture: present the combat first; the engine applies it on completion.
+    const combat: CombatState = { id: nextCombatId++, phase: 'entering', attacker, defender, move };
+    return { ...state, selected: null, legalMoves: [], combat };
+  }
+  return commitMove(state, move);
+}
+
 function commitMove(state: UiState, move: Move): UiState {
   const result = applyMove(state.game, move);
   if (!result.ok) return { ...clearSelection(state), combat: null };
   return {
+    ...state,
     game: result.state,
     selected: null,
     legalMoves: [],
     lastMove: { from: move.from, to: move.to },
     combat: null,
   };
+}
+
+function handleAiMove(state: UiState, action: Extract<UiAction, { type: 'aiMove' }>): UiState {
+  // Drop results for an old game, an old position, or when it is not the AI's turn.
+  if (action.gameId !== state.gameId) return state;
+  if (action.ply !== state.game.history.length) return state;
+  if (getAiState(state) !== 'thinking') return state;
+  if (!isLegalMove(state.game, action.move)) return state; // the engine has the final word
+  return playMove(state, action.move);
 }
 
 export function uiReducer(state: UiState, action: UiAction): UiState {
@@ -117,7 +169,10 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       // Escape etc. never cancel an active combat.
       return state.combat ? state : clearSelection(state);
     case 'newGame':
-      return state.combat ? state : createUiState();
+      // A new game id makes any pending AI result stale.
+      return state.combat ? state : createUiState(undefined, { aiSide: state.aiSide });
+    case 'aiMove':
+      return handleAiMove(state, action);
     case 'combatPhase':
       if (!state.combat || state.combat.id !== action.id) return state;
       return { ...state, combat: { ...state.combat, phase: action.phase } };
@@ -146,13 +201,13 @@ export function isCaptureTarget(state: UiState, position: Position): boolean {
 }
 
 export type StatusView =
-  | { readonly kind: 'turn'; readonly side: 'red' | 'blue'; readonly check: boolean }
-  | { readonly kind: 'over'; readonly winner: 'red' | 'blue'; readonly reason: 'checkmate' | 'stalemate' | 'general_captured' };
+  | { readonly kind: 'turn'; readonly side: Side; readonly check: boolean; readonly thinking: boolean }
+  | { readonly kind: 'over'; readonly winner: Side; readonly reason: 'checkmate' | 'stalemate' | 'general_captured' };
 
-/** Status panel content, read straight from the engine's GameStatus. */
-export function getStatusView(game: GameState): StatusView {
+/** Status panel content, read straight from the engine's GameStatus plus the AI state. */
+export function getStatusView(game: GameState, aiState: AiState = 'idle'): StatusView {
   if (game.status !== 'playing' && game.winner) {
     return { kind: 'over', winner: game.winner, reason: game.status };
   }
-  return { kind: 'turn', side: game.turn, check: game.inCheck };
+  return { kind: 'turn', side: game.turn, check: game.inCheck, thinking: aiState === 'thinking' };
 }

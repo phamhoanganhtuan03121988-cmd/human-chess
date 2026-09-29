@@ -20,7 +20,7 @@ describe('game controller', () => {
     const s = createUiState();
     expect(getPlacements(s.game)).toHaveLength(32);
     expect(s.game.turn).toBe('red');
-    expect(getStatusView(s.game)).toEqual({ kind: 'turn', side: 'red', check: false });
+    expect(getStatusView(s.game)).toEqual({ kind: 'turn', side: 'red', check: false, thinking: false });
     expect(s.selected).toBeNull();
   });
 
@@ -115,7 +115,7 @@ describe('game controller', () => {
     const after = click(click(s, 0, 5), 4, 5);
     expect(after.game.inCheck).toBe(true);
     expect(isInCheck(after.game.board, 'blue')).toBe(true);
-    expect(getStatusView(after.game)).toEqual({ kind: 'turn', side: 'blue', check: true });
+    expect(getStatusView(after.game)).toEqual({ kind: 'turn', side: 'blue', check: true, thinking: false });
   });
 
   it('checkmate ends the game, shows the winner and blocks further moves', () => {

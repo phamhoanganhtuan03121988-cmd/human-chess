@@ -71,7 +71,7 @@ describe('GameBoard UI', () => {
     fireEvent.click(markers()[0]!);
     expect(pieceImg(4, 6)).toBeNull();
     expect(pieceImg(4, 5)?.dataset).toMatchObject({ side: 'red', type: 'pawn' });
-    expect(status()).toBe('BLUE TURN');
+    expect(status()).toBe('BLUE THINKING...'); // App plays Blue with the AI
     expect(markers()).toHaveLength(0);
     const from = screen.getByTestId('last-move-from');
     const to = screen.getByTestId('ring-last-move');
@@ -151,7 +151,7 @@ describe('GameBoard UI', () => {
     );
     fireEvent.click(pieceImg(0, 5)!);
     fireEvent.click(markers().find((m) => m.dataset.x === '4' && m.dataset.y === '5')!);
-    expect(status()).toBe('BLUE TURNCHECK');
+    expect(status()).toBe('BLUE IN CHECK');
     const ring = screen.getByTestId('ring-check');
     expect([ring.dataset.x, ring.dataset.y]).toEqual(['4', '0']);
   });
@@ -175,7 +175,7 @@ describe('GameBoard UI', () => {
     );
     fireEvent.click(pieceImg(0, 5)!);
     fireEvent.click(markers().find((m) => m.dataset.x === '0' && m.dataset.y === '0')!);
-    expect(status()).toBe('RED WINSCheckmate');
+    expect(status()).toBe('CHECKMATE — RED WINS');
     fireEvent.click(pieceImg(3, 0)!);
     fireEvent.click(pieceImg(8, 1)!);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
@@ -207,7 +207,7 @@ describe('GameBoard UI', () => {
     fireEvent.click(pieceImg(4, 5)!);
     fireEvent.click(pieceImg(4, 9)!);
     finishCombat();
-    expect(status()).toBe('BLUE WINSGeneral captured');
+    expect(status()).toBe('GENERAL CAPTURED — BLUE WINS');
   });
 
   it('keeps debug mode working', () => {

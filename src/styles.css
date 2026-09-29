@@ -394,3 +394,13 @@ body { background: var(--page-bg); color: #f5f0e6; }
   .combat-card, .combat-vs { transition: none; }
   .combat-overlay { animation: none; }
 }
+
+/* AI thinking: gentle pulse on the status pill. */
+.status--thinking .status__main { animation: status-pulse 1s ease-in-out infinite; }
+@keyframes status-pulse {
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status--thinking .status__main { animation: none; }
+}
+.toolbar__button:disabled { opacity: 0.45; cursor: default; }

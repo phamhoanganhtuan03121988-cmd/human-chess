@@ -3,11 +3,17 @@ import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { GameBoard } from './components/GameBoard.tsx';
 import { StatusPanel } from './components/StatusPanel.tsx';
 import { isBoardDebugEnabled } from './config/debug.ts';
-import { createUiState, getStatusView, uiReducer } from './game/controller.ts';
+import { createUiState, getAiState, getStatusView, uiReducer } from './game/controller.ts';
+import { useAiOpponent } from './game/useAiOpponent.ts';
+
+/** V1: the human plays Red, the computer plays Blue. */
+const AI_SIDE = 'blue' as const;
 
 export function App() {
   const [debug, setDebug] = useState(isBoardDebugEnabled);
-  const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState());
+  const [ui, dispatch] = useReducer(uiReducer, undefined, () => createUiState(undefined, { aiSide: AI_SIDE }));
+  const aiState = getAiState(ui);
+  useAiOpponent(ui, dispatch);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -20,11 +26,11 @@ export function App() {
   return (
     <main className="app">
       <div className="toolbar">
-        <StatusPanel status={getStatusView(ui.game)} />
+        <StatusPanel status={getStatusView(ui.game, aiState)} />
         <button
           type="button"
           className="toolbar__button"
-          disabled={ui.combat !== null}
+          disabled={ui.combat !== null || aiState === 'thinking'}
           onClick={() => dispatch({ type: 'newGame' })}
         >
           New game

@@ -88,10 +88,17 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     expect(pieceAt(1, 0)).toBe('red cannon');
     expect(pieceAt(1, 7)).toBeNull();
     expect(screen.getAllByTestId('piece')).toHaveLength(31);
-    expect(status()).toBe('BLUE TURN');
-    expect(document.querySelector('.board-frame--locked')).toBeNull();
+    expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue
+    expect(document.querySelector('.board-frame--locked')).not.toBeNull(); // locked while AI thinks
     const to = screen.getByTestId('ring-last-move');
     expect(`${to.dataset.x},${to.dataset.y}`).toBe('1,0');
+
+    // The AI replies (possibly with its own combat), then control returns to Red.
+    advance(800);
+    if (overlay()) advance(1600);
+    expect(overlay()).toBeNull();
+    expect(status()).toBe('RED TURN');
+    expect(document.querySelector('.board-frame--locked')).toBeNull();
   });
 
   it('locks board interaction and ignores Escape during combat', () => {
@@ -112,7 +119,7 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     advance(1100);
     expect(overlay()).toBeNull();
     expect(pieceAt(1, 0)).toBe('red cannon');
-    expect(status()).toBe('BLUE TURN');
+    expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue
   });
 });
 
@@ -124,7 +131,7 @@ describe('combat overlay: normal movement', () => {
     expect(overlay()).toBeNull();
     expect(document.querySelector('[data-testid$="-portrait"]')).toBeNull();
     expect(pieceAt(4, 5)).toBe('red pawn');
-    expect(status()).toBe('BLUE TURN');
+    expect(status()).toBe('BLUE THINKING...'); // App: AI plays Blue
   });
 });
 
