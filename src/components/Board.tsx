@@ -37,6 +37,12 @@ interface BoardProps {
   combat?: boolean;
   /** Impact shake amplitude in px; 0 = no shake. */
   shakePx?: number;
+  /** Side to move (subtle edge light on that side of the board); null when over. */
+  turn?: 'red' | 'blue' | null;
+  /** Input is locked because something is happening (AI, movement, combat). */
+  waiting?: boolean;
+  /** The game has ended (board dims slightly behind the result banner). */
+  over?: boolean;
 }
 
 /**
@@ -52,6 +58,9 @@ export function Board({
   interactive = true,
   combat = false,
   shakePx = 0,
+  turn = null,
+  waiting = false,
+  over = false,
 }: BoardProps) {
   const frameHeight = BOARD_HEIGHT + headroom;
   const frameStyle = {
@@ -64,6 +73,9 @@ export function Board({
     !interactive && 'board-frame--locked',
     combat && 'board-frame--combat',
     shakePx > 0 && 'board-frame--impact',
+    turn && `board-frame--turn-${turn}`,
+    waiting && 'board-frame--waiting',
+    over && 'board-frame--over',
   ];
 
   return (

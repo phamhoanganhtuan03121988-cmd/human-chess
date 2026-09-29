@@ -16,6 +16,10 @@ export interface PieceInteraction {
   motion?: CSSProperties | null;
   /** Settle briefly after arriving (the move just committed here). */
   landing?: boolean;
+  /** The player can click this piece now (own piece on turn, or a capture target). */
+  actionable?: boolean;
+  /** This General is in check. */
+  alert?: boolean;
 }
 
 interface PieceProps extends PieceInteraction {
@@ -49,6 +53,7 @@ export function Piece({
   onSelect,
   motion,
   landing,
+  actionable,
 }: PieceProps) {
   const sprite = getPieceSprite(type);
   const classes = [
@@ -73,6 +78,7 @@ export function Piece({
           `piece__img--${side}`,
           motion && 'is-moving',
           landing && !motion && 'is-landing',
+          actionable && 'is-actionable',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -83,6 +89,7 @@ export function Piece({
         data-side={side}
         data-type={type}
         data-moving={motion ? 'true' : undefined}
+        data-actionable={actionable ? 'true' : undefined}
         style={{ height: boardUnits(sprite.height), ...motion }}
         onPointerEnter={() => onHoverChange?.(true)}
         onPointerLeave={() => onHoverChange?.(false)}

@@ -8,7 +8,18 @@
  */
 import { FILES, RANKS } from '../board/geometry.ts';
 import type { PiecePlacement } from '../board/initialPosition.ts';
-import { applyMove, createInitialGameState, getLegalMoves, isGameOver, isLegalMove, pieceAt } from '../engine/index.ts';
+import {
+  applyMove,
+  createInitialGameState,
+  findGeneral,
+  generalsFacing,
+  getLegalMoves,
+  getPseudoLegalTargets,
+  isGameOver,
+  isLegalMove,
+  opponent,
+  pieceAt,
+} from '../engine/index.ts';
 import type { GameState, Move, Piece, Position, Side } from '../engine/index.ts';
 
 /**
@@ -102,6 +113,25 @@ export function getAiState(state: UiState): AiState {
 
 let nextCombatId = 1;
 let nextMovementId = 1;
+
+/**
+ * What the game is doing right now, for presentation (status panel, board
+ * feedback). Derived from UI + engine state; never stored.
+ * - over:     the engine reports the game finished
+ * - combat:   a capture is being presented
+ * - moving:   a normal move is animating
+ * - thinking: the AI is choosing a move
+ * - idle:     waiting for the side to move to act
+ */
+export type Activity = 'idle' | 'thinking' | 'moving' | 'combat' | 'over';
+
+export function getActivity(state: UiState): Activity {
+  if (isGameOver(state.game)) return 'over';
+  if (state.combat) return 'combat';
+  if (state.movement) return 'moving';
+  if (getAiState(state) === 'thinking') return 'thinking';
+  return 'idle';
+}
 
 /** True while a capture combat or a movement animation is being presented. */
 export function isPresenting(state: UiState): boolean {
@@ -242,4 +272,60 @@ export function getStatusView(game: GameState, aiState: AiState = 'idle'): Statu
     return { kind: 'over', winner: game.winner, reason: game.status };
   }
   return { kind: 'turn', side: game.turn, check: game.inCheck, thinking: aiState === 'thinking' };
+}
+
+/**
+ * Enemy pieces currently giving check to the side to move (for highlighting).
+ * Uses the engine's own move generation; adds no rules. Empty when not in check.
+ */
+export function getCheckingPieces(game: GameState): Position[] {
+  if (!game.inCheck) return [];
+  const general = findGeneral(game.board, game.turn);
+  if (!general) return [];
+  const out: Position[] = [];
+  for (let x = 0; x < FILES; x++) {
+    for (let y = 0; y < RANKS; y++) {
+      const p = game.board[x]![y];
+      if (!p || p.side === game.turn) continue;
+      if (getPseudoLegalTargets(game.board, { x, y }).some((t) => t.x === general.x && t.y === general.y)) {
+        out.push({ x, y });
+      }
+    }
+  }
+  if (generalsFacing(game.board)) {
+    const other = findGeneral(game.board, opponent(game.turn));
+    if (other) out.push(other);
+  }
+  return out;
+}
+
+export interface GameOverView {
+  readonly title: string;
+  readonly winner: Side;
+  readonly loser: Side;
+  readonly detail: string;
+  /** The losing side's General, if still on the board. */
+  readonly defeatedGeneral: Position | null;
+}
+
+const SIDE_NAME: Record<Side, string> = { red: 'Red', blue: 'Blue' };
+
+/** Presentation of a finished game, read from the engine status. Null while playing. */
+export function getGameOverView(game: GameState): GameOverView | null {
+  if (game.status === 'playing' || !game.winner) return null;
+  const winner = game.winner;
+  const loser = opponent(winner);
+  const titles = { checkmate: 'CHECKMATE', stalemate: 'STALEMATE', general_captured: 'GENERAL CAPTURED' } as const;
+  const details = {
+    checkmate: `${SIDE_NAME[loser]}'s General cannot escape`,
+    stalemate: `${SIDE_NAME[loser]} has no legal moves`,
+    general_captured: `${SIDE_NAME[loser]}'s General has fallen`,
+  } as const;
+  return {
+    title: titles[game.status],
+    winner,
+    loser,
+    detail: details[game.status],
+    defeatedGeneral: findGeneral(game.board, loser),
+  };
 }

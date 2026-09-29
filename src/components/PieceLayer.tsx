@@ -18,6 +18,10 @@ interface PieceLayerProps {
   moving?: { from: Position; style: CSSProperties } | null;
   /** Destination of the move that just committed (brief landing settle). */
   landedAt?: Position | null;
+  /** Side whose pieces the player may select now; null when input is locked. */
+  actingSide?: 'red' | 'blue' | null;
+  /** General currently in check. */
+  alertAt?: Position | null;
   /** Show sprite outlines and anchor points (debug mode). */
   debug?: boolean;
 }
@@ -39,6 +43,8 @@ export function PieceLayer({
   onClickPiece,
   moving = null,
   landedAt = null,
+  actingSide = null,
+  alertAt = null,
   debug = false,
 }: PieceLayerProps) {
   const interaction = (p: PiecePlacement) => ({
@@ -49,6 +55,8 @@ export function PieceLayer({
     onSelect: () => onClickPiece({ x: p.x, y: p.y }),
     motion: moving && eq(moving.from, p) ? moving.style : null,
     landing: eq(landedAt, p),
+    actionable: actingSide !== null && (p.side === actingSide || at(captureTargets, p)),
+    alert: eq(alertAt, p),
   });
   const key = (p: PiecePlacement) => `${p.side}-${p.type}-${p.x},${p.y}`;
 

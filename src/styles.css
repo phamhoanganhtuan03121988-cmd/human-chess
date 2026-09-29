@@ -20,9 +20,27 @@
 
 html, body, #root { height: 100%; margin: 0; }
 
-body { background: var(--page-bg); color: #f5f0e6; }
+body {
+  color: #f5f0e6;
+  /* Ambient light: a warm pool behind the board fading into the dark hall. */
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 45%, rgba(120, 88, 52, 0.35), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 110%, rgba(70, 30, 20, 0.35), transparent 60%),
+    var(--page-bg);
+}
+/* Soft vignette on the page edges, drawn behind the game so pieces stay fully readable. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+  z-index: 0;
+}
 
 .app {
+  position: relative;
+  z-index: 1;
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -51,7 +69,8 @@ body { background: var(--page-bg); color: #f5f0e6; }
 }
 .toolbar__button:hover { background: rgba(255, 255, 255, 0.12); }
 
-/* Status panel */
+/* Status panel: pill (turn / activity / result) + a short hint for the player. */
+.status-panel { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .status {
   display: flex;
   align-items: center;
@@ -61,10 +80,32 @@ body { background: var(--page-bg); color: #f5f0e6; }
   border: 1px solid currentColor;
   font-weight: 700;
   letter-spacing: 0.06em;
+  white-space: nowrap;
   background: rgba(255, 255, 255, 0.06);
+  transition: background 200ms ease, box-shadow 200ms ease;
+  /* Re-mounted on each turn change: short entry transition. */
+  animation: status-enter 240ms ease-out both;
 }
 .status--red { color: #ff8a80; }
 .status--blue { color: #8ab4ff; }
+.status--red { background: rgba(179, 38, 30, 0.22); }
+.status--blue { background: rgba(30, 79, 163, 0.28); }
+/* The side that may act now gets a soft glow. */
+.status--red.status--idle { box-shadow: 0 0 12px rgba(255, 138, 128, 0.3); }
+.status--blue.status--idle { box-shadow: 0 0 12px rgba(138, 180, 255, 0.3); }
+.status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+/* Locked states: dot pulses gently while the player waits (stops when idle). */
+.status--thinking .status__dot,
+.status--moving .status__dot,
+.status--combat .status__dot { animation: status-dot 0.9s ease-in-out infinite; }
+.status--combat { background: rgba(246, 227, 161, 0.14); }
+.status--check { border-color: #ff5a4a; box-shadow: 0 0 10px rgba(255, 90, 74, 0.45); }
 .status__check {
   padding: 0 8px;
   border-radius: 999px;
@@ -74,6 +115,24 @@ body { background: var(--page-bg); color: #f5f0e6; }
 }
 .status__detail { font-weight: 500; font-size: 12px; opacity: 0.85; letter-spacing: 0.02em; }
 .status--over { background: rgba(246, 227, 161, 0.12); }
+.status-hint {
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-hint--wait { opacity: 0.9; font-style: italic; }
+@keyframes status-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes status-dot {
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status, .status__dot { animation: none !important; }
+}
 
 /*
  * Board sizing: the frame is the 9:10 board (BOARD_WIDTH : BOARD_HEIGHT in
@@ -83,8 +142,19 @@ body { background: var(--page-bg); color: #f5f0e6; }
  */
 .board-frame {
   position: relative;
+  /* Depth: lacquered wood with a faint grain, a gilded rim and a cast shadow. */
+  background-image:
+    repeating-linear-gradient(92deg, rgba(120, 80, 30, 0.035) 0 2px, transparent 2px 9px),
+    radial-gradient(ellipse 80% 70% at 50% 40%, rgba(255, 240, 205, 0.35), transparent 70%),
+    linear-gradient(180deg, #ecd098, #e0bd80);
+  box-shadow:
+    0 0 0 1px rgba(122, 90, 28, 0.9),
+    0 0 0 4px rgba(90, 58, 26, 0.9),
+    0 0 0 5px rgba(201, 162, 74, 0.55),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    inset 0 0 22px rgba(90, 58, 26, 0.28);
   width: min(100%, calc((100dvh - 56px) * var(--frame-aspect)));
-  background: var(--board-bg);
+  background-color: var(--board-bg);
   border-radius: 1.2%;
 }
 
@@ -108,8 +178,26 @@ body { background: var(--page-bg); color: #f5f0e6; }
 .board__layer--badges { z-index: 3; }
 .board__layer--markers { z-index: 4; }
 .board__layer--debug { z-index: 5; }
+.board__layer--banner { z-index: 6; display: grid; place-items: center; }
 .board-frame--locked .piece__img,
 .board-frame--locked .piece-badge { cursor: default; }
+/* Waiting for the AI / an animation / a combat: input is ignored. */
+.board-frame--waiting,
+.board-frame--waiting .piece__img,
+.board-frame--waiting .piece-badge { cursor: progress; }
+/* Side to move: a soft light along that side's edge of the board. */
+.board-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease, box-shadow 300ms ease;
+  z-index: 0;
+}
+.board-frame--turn-red::before { opacity: 1; box-shadow: inset 0 -10px 18px -10px rgba(214, 70, 50, 0.55); }
+.board-frame--turn-blue::before { opacity: 1; box-shadow: inset 0 10px 18px -10px rgba(70, 120, 220, 0.55); }
 
 .board__line { stroke: var(--board-line); stroke-width: 0.025; stroke-linecap: square; }
 .board__frame { fill: none; stroke: var(--board-line); stroke-width: 0.05; }
@@ -139,46 +227,86 @@ body { background: var(--page-bg); color: #f5f0e6; }
 /* Pieces */
 .piece__img {
   display: block;
+  cursor: default;
   width: auto;
   user-select: none;
   pointer-events: auto;
-  cursor: pointer;
   transition: filter 120ms ease;
 }
+/* Only pieces the player can act on show a pointer. */
+.piece__img.is-actionable,
+.piece-badge.is-actionable { cursor: pointer; }
 .piece.is-hovered .piece__img { filter: brightness(1.08); }
 .piece.is-selected .piece__img--red { filter: drop-shadow(0 0 0.5cqw rgba(255, 196, 120, 0.95)) brightness(1.06); }
 .piece.is-selected .piece__img--blue { filter: drop-shadow(0 0 0.5cqw rgba(150, 200, 255, 0.95)) brightness(1.06); }
 
 /* Ground rings under the feet, centered on the intersection. */
 .piece-ring { border-radius: 50%; }
-.piece-ring--hover { border: 0.25cqw solid rgba(122, 90, 28, 0.45); }
+/* Hover: thin gilded ring. */
+.piece-ring--hover {
+  border: 0.22cqw solid rgba(201, 162, 74, 0.75);
+  box-shadow: 0 0 0.6cqw rgba(246, 227, 161, 0.45);
+  animation: ring-in 140ms ease-out both;
+}
+/* Selected: double gold ring with a soft team-tinted pool; pops once on select. */
 .piece-ring--selected {
   border: 0.3cqw solid var(--gold-hi);
-  box-shadow: 0 0 1.2cqw 0.2cqw rgba(246, 227, 161, 0.85), inset 0 0 0.8cqw rgba(246, 227, 161, 0.6);
+  box-shadow:
+    0 0 0 0.25cqw rgba(122, 90, 28, 0.55),
+    0 0 1.3cqw 0.25cqw rgba(246, 227, 161, 0.8),
+    inset 0 0 0.8cqw rgba(246, 227, 161, 0.6);
+  animation: ring-pop 200ms ease-out both;
 }
-.piece-ring--selected.piece-ring--red { background: radial-gradient(closest-side, rgba(179, 38, 30, 0.28), transparent); }
-.piece-ring--selected.piece-ring--blue { background: radial-gradient(closest-side, rgba(30, 79, 163, 0.28), transparent); }
-/* Legal capture: dashed crimson ring around the target. */
+.piece-ring--selected.piece-ring--red { background: radial-gradient(closest-side, rgba(179, 38, 30, 0.32), transparent); }
+.piece-ring--selected.piece-ring--blue { background: radial-gradient(closest-side, rgba(30, 79, 163, 0.32), transparent); }
+/* Legal capture: dashed crimson ring at the target's feet. */
 .piece-ring--capture {
-  border: 0.32cqw dashed #c0392b;
-  box-shadow: 0 0 0.8cqw rgba(192, 57, 43, 0.55);
-  background: radial-gradient(closest-side, rgba(192, 57, 43, 0.18), transparent);
+  border: 0.28cqw dashed #c0392b;
+  box-shadow: 0 0 0.8cqw rgba(192, 57, 43, 0.5);
+  background: radial-gradient(closest-side, rgba(192, 57, 43, 0.16), transparent);
 }
-/* General in check: soft red glow. */
+/* General in check: red glow that pulses briefly, then stays steady. */
 .piece-ring--check {
-  background: radial-gradient(closest-side, rgba(220, 40, 30, 0.55), rgba(220, 40, 30, 0.15) 70%, transparent);
-  box-shadow: 0 0 1.4cqw 0.3cqw rgba(220, 40, 30, 0.45);
+  background: radial-gradient(closest-side, rgba(220, 40, 30, 0.6), rgba(220, 40, 30, 0.18) 70%, transparent);
+  box-shadow: 0 0 1.6cqw 0.4cqw rgba(220, 40, 30, 0.5);
+  animation: check-pulse 700ms ease-in-out 3;
 }
-/* Last move: faint gold ring at the destination, hollow dot at the origin. */
-.piece-ring--last-move { border: 0.22cqw solid rgba(201, 162, 74, 0.8); background: rgba(246, 227, 161, 0.2); }
-.last-move-from {
-  border-radius: 50%;
+/* Piece giving check: thin red ring. */
+.piece-ring--checker {
+  border: 0.22cqw solid rgba(220, 60, 45, 0.85);
+  box-shadow: 0 0 0.8cqw rgba(220, 60, 45, 0.45);
+}
+/* Defeated General after checkmate / stalemate. */
+.piece-ring--defeated {
+  background: radial-gradient(closest-side, rgba(40, 30, 25, 0.55), rgba(40, 30, 25, 0.15) 70%, transparent);
+  border: 0.22cqw solid rgba(160, 40, 30, 0.7);
+}
+/* Last move: destination ring and source mark, tinted by the side that moved. */
+.piece-ring--last-move {
   border: 0.22cqw solid rgba(201, 162, 74, 0.85);
-  background: rgba(246, 227, 161, 0.25);
+  background: radial-gradient(closest-side, rgba(246, 227, 161, 0.28), transparent);
 }
+.piece-ring--last-move.piece-ring--red { box-shadow: 0 0 0.9cqw rgba(214, 90, 60, 0.45); }
+.piece-ring--last-move.piece-ring--blue { box-shadow: 0 0 0.9cqw rgba(90, 140, 220, 0.5); }
+.last-move-from {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0.22cqw dashed rgba(170, 128, 50, 0.9);
+  background: rgba(246, 227, 161, 0.22);
+}
+.last-move-from__dot {
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(201, 162, 74, 0.8);
+}
+.last-move--red .last-move-from__dot { background: rgba(190, 70, 50, 0.75); }
+.last-move--blue .last-move-from__dot { background: rgba(60, 100, 190, 0.75); }
 
-/* Legal destination marker: transparent hit area with a small dot on the intersection. */
+/* Legal destination: transparent hit area with a jade dot on the intersection. */
 .move-marker {
+  position: relative;
   display: grid;
   place-items: center;
   padding: 0;
@@ -187,22 +315,69 @@ body { background: var(--page-bg); color: #f5f0e6; }
   background: transparent;
   pointer-events: auto;
   cursor: pointer;
+  animation: marker-in 160ms ease-out both;
 }
+.move-marker::before {
+  /* Hover halo around the dot. */
+  content: '';
+  position: absolute;
+  inset: 22.5%;
+  border-radius: 50%;
+  border: 0.2cqw solid rgba(46, 125, 80, 0.7);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.move-marker:hover::before { opacity: 1; transform: none; }
 .move-marker__dot {
   border-radius: 50%;
-  background: rgba(38, 110, 60, 0.75);
-  box-shadow: 0 0 0 0.2cqw rgba(255, 255, 255, 0.7);
-  transition: transform 100ms ease;
+  background: radial-gradient(circle at 40% 35%, #5fb07f, #2e6e48 70%);
+  box-shadow: 0 0 0 0.18cqw rgba(255, 250, 235, 0.8), 0 0.15cqw 0.35cqw rgba(0, 0, 0, 0.3);
+  transition: transform 120ms ease;
 }
-.move-marker:hover .move-marker__dot { transform: scale(1.3); }
+.move-marker:hover .move-marker__dot { transform: scale(1.25); }
 .move-marker:focus { outline: none; }
 .move-marker:focus-visible .move-marker__dot { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+/* Capture target: crimson reticle centered on the intersection (visual only). */
+.capture-reticle {
+  display: block;
+  border-radius: 50%;
+  border: 0.22cqw solid rgba(192, 57, 43, 0.85);
+  background:
+    linear-gradient(rgba(192, 57, 43, 0.9), rgba(192, 57, 43, 0.9)) top center / 0.22cqw 22% no-repeat,
+    linear-gradient(rgba(192, 57, 43, 0.9), rgba(192, 57, 43, 0.9)) bottom center / 0.22cqw 22% no-repeat,
+    linear-gradient(rgba(192, 57, 43, 0.9), rgba(192, 57, 43, 0.9)) left center / 22% 0.22cqw no-repeat,
+    linear-gradient(rgba(192, 57, 43, 0.9), rgba(192, 57, 43, 0.9)) right center / 22% 0.22cqw no-repeat;
+  box-shadow: 0 0 0.7cqw rgba(192, 57, 43, 0.45);
+  pointer-events: none;
+  animation: marker-in 160ms ease-out both;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.capture-reticle.is-hovered { transform: scale(1.12); box-shadow: 0 0 1.2cqw rgba(220, 70, 50, 0.7); }
+
+@keyframes ring-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ring-pop {
+  0% { opacity: 0; transform: scale(0.7); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { transform: none; }
+}
+@keyframes check-pulse {
+  50% { box-shadow: 0 0 2.4cqw 0.8cqw rgba(230, 50, 35, 0.65); }
+}
+@keyframes marker-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
 
 /* Identification badge: wooden disc with a gilded rim, glyph in team color. */
 .piece-badge__slot { position: relative; display: flex; flex-direction: column; align-items: center; }
 .piece-badge {
   pointer-events: auto;
-  cursor: pointer;
+  cursor: default;
   display: grid;
   place-items: center;
   padding: 0;
@@ -226,6 +401,12 @@ body { background: var(--page-bg); color: #f5f0e6; }
   box-shadow:
     0 0 0 max(0.2cqw, 1.5px) #c0392b,
     0 0 0.8cqw rgba(192, 57, 43, 0.7);
+}
+.piece-badge.is-alert {
+  border-color: #e0463a;
+  box-shadow:
+    0 0 0 max(0.12cqw, 1px) #7a1a12,
+    0 0 1cqw rgba(230, 60, 45, 0.8);
 }
 .piece-badge.is-selected {
   border-color: var(--gold-hi);
@@ -621,14 +802,6 @@ body { background: var(--page-bg); color: #f5f0e6; }
   .combat-card, .combat-card.is-active, .combat-card.is-impact, .combat-vs { transform: none; transition: opacity 150ms linear; }
 }
 
-/* AI thinking: gentle pulse on the status pill. */
-.status--thinking .status__main { animation: status-pulse 1s ease-in-out infinite; }
-@keyframes status-pulse {
-  50% { opacity: 0.55; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .status--thinking .status__main { animation: none; }
-}
 .toolbar__button:disabled { opacity: 0.45; cursor: default; }
 
 /* ------------------------------------------------------------------ */
@@ -669,4 +842,54 @@ body { background: var(--page-bg); color: #f5f0e6; }
   .piece__img.is-landing,
   .piece-badge__slot.is-landing { animation: none; }
   .piece__img.is-moving { filter: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Game over: compact result banner over a slightly dimmed board.      */
+/* ------------------------------------------------------------------ */
+.board-frame--over .board__layer--pieces,
+.board-frame--over .board__layer--badges { filter: saturate(0.75) brightness(0.9); transition: filter 400ms ease; }
+.game-over {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6cqw;
+  padding: 2.2cqw 4.5cqw 2.4cqw;
+  border-radius: 1.4cqw;
+  border: 2px solid var(--gold);
+  background: linear-gradient(180deg, rgba(40, 30, 20, 0.92), rgba(24, 18, 12, 0.9));
+  box-shadow: 0 0 0 1px var(--gold-lo), 0 1.2cqw 3cqw rgba(0, 0, 0, 0.55);
+  color: var(--gold-hi);
+  text-align: center;
+  animation: banner-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.game-over--red { box-shadow: 0 0 0 1px var(--gold-lo), 0 0 3cqw rgba(214, 70, 50, 0.45), 0 1.2cqw 3cqw rgba(0, 0, 0, 0.55); }
+.game-over--blue { box-shadow: 0 0 0 1px var(--gold-lo), 0 0 3cqw rgba(70, 120, 220, 0.5), 0 1.2cqw 3cqw rgba(0, 0, 0, 0.55); }
+.game-over__title { font-size: max(3.6cqw, 16px); font-weight: 900; letter-spacing: 0.14em; }
+.game-over__winner { font-size: max(2.6cqw, 13px); font-weight: 800; letter-spacing: 0.1em; }
+.game-over--red .game-over__winner { color: #ff8a80; }
+.game-over--blue .game-over__winner { color: #8ab4ff; }
+.game-over__detail { font-size: max(1.6cqw, 11px); opacity: 0.85; }
+.game-over__button {
+  margin-top: 0.8cqw;
+  font: inherit;
+  font-size: max(1.7cqw, 12px);
+  font-weight: 700;
+  padding: 0.5cqw 2cqw;
+  border-radius: 999px;
+  border: 1px solid var(--gold);
+  background: rgba(246, 227, 161, 0.14);
+  color: var(--gold-hi);
+  cursor: pointer;
+}
+.game-over__button:hover { background: rgba(246, 227, 161, 0.26); }
+@keyframes banner-in {
+  from { opacity: 0; transform: translateY(1.5cqw) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece-ring--hover, .piece-ring--selected, .piece-ring--check,
+  .move-marker, .capture-reticle, .game-over { animation: none; }
 }

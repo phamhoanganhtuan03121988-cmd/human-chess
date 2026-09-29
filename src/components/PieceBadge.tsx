@@ -31,6 +31,8 @@ export function PieceBadge({
   onSelect,
   motion,
   landing,
+  actionable,
+  alert,
 }: PieceBadgeProps) {
   const label = getPieceLabel(side, type);
   const size = `max(${boardUnits(BADGE_SIZE)}, ${BADGE_MIN_PX}px)`;
@@ -42,6 +44,8 @@ export function PieceBadge({
     hovered && 'is-hovered',
     selected && 'is-selected',
     capturable && 'is-capturable',
+    actionable && 'is-actionable',
+    alert && 'is-alert',
   ];
 
   return (

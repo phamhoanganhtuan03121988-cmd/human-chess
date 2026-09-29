@@ -78,7 +78,7 @@ describe('movement animation (UI)', () => {
     expect(screen.queryByTestId('ring-last-move')).toBeNull(); // not before arrival
     expect(screen.queryAllByTestId('move-marker')).toHaveLength(0);
     expect(screen.queryByTestId('ring-selected')).toBeNull();
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('RED MOVING'); // in transit, turn not passed yet
     expect(locked()).toBe(true);
     expect((screen.getByText('New game') as HTMLButtonElement).disabled).toBe(true);
 

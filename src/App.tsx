@@ -3,7 +3,7 @@ import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { GameBoard } from './components/GameBoard.tsx';
 import { StatusPanel } from './components/StatusPanel.tsx';
 import { isBoardDebugEnabled } from './config/debug.ts';
-import { createUiState, getAiState, getStatusView, isPresenting, uiReducer } from './game/controller.ts';
+import { createUiState, getActivity, getAiState, getStatusView, isPresenting, uiReducer } from './game/controller.ts';
 import { useAiOpponent } from './game/useAiOpponent.ts';
 import { useGameAudio } from './game/useGameAudio.ts';
 
@@ -28,7 +28,7 @@ export function App() {
   return (
     <main className="app">
       <div className="toolbar">
-        <StatusPanel status={getStatusView(ui.game, aiState)} />
+        <StatusPanel status={getStatusView(ui.game, aiState)} activity={getActivity(ui)} aiSide={ui.aiSide} />
         <button
           type="button"
           className="toolbar__button"

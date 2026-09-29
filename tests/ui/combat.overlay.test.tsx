@@ -53,7 +53,8 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     expect(document.querySelector('.board-frame--locked')).not.toBeNull();
     expect(pieceAt(1, 0)).toBe('blue knight');
     expect(pieceAt(1, 7)).toBe('red cannon');
-    expect(status()).toBe('RED TURN');
+    expect(status()).toBe('RED ATTACKS'); // combat in progress, nothing applied yet
+    expect(screen.getByTestId('status-hint').textContent).toBe('Battle in progress…');
 
     // 6-7. portraits from the manifest for the actual pieces
     expect(portrait('attacker')).toBe('/assets/portraits/red/cannon.png');

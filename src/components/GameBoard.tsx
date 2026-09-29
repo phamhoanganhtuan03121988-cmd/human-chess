@@ -4,7 +4,16 @@ import { findGeneral, pieceAt } from '../engine/index.ts';
 import type { Position } from '../engine/index.ts';
 import { PIECE_HEADROOM } from '../config/pieceSprites.ts';
 import type { UiAction, UiState } from '../game/controller.ts';
-import { getAiState, getPlacements, isCaptureTarget, isPresenting } from '../game/controller.ts';
+import {
+  getActivity,
+  getAiState,
+  getCheckingPieces,
+  getGameOverView,
+  getPlacements,
+  isCaptureTarget,
+  isPresenting,
+} from '../game/controller.ts';
+import { GameOverBanner } from './GameOverBanner.tsx';
 import { isGameOver } from '../engine/index.ts';
 import { Board } from './Board.tsx';
 import { getImpactProfile } from './combat/combatFx.ts';
@@ -44,13 +53,22 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
   // Subtle board shake at the combat impact (skipped for reduced motion).
   const shakePx = ui.combat?.phase === 'impact' && !reducedMotion ? getImpactProfile(ui.combat.attacker.type).shakePx : 0;
 
+  const activity = getActivity(ui);
+  const interactive = !isGameOver(game) && !isPresenting(ui) && getAiState(ui) === 'idle';
+  const checkedGeneral = game.inCheck ? findGeneral(game.board, game.turn) : null;
+  const gameOver = getGameOverView(game);
+  const lastMoveSide = lastMove ? (pieceAt(game.board, lastMove.to)?.side ?? null) : null;
+
   return (
     <Board
+      turn={activity === 'over' ? null : game.turn}
+      over={activity === 'over'}
+      waiting={activity === 'thinking' || activity === 'moving' || activity === 'combat'}
       combat={ui.combat !== null}
       shakePx={shakePx}
       debug={debug}
       headroom={PIECE_HEADROOM}
-      interactive={!isGameOver(game) && !isPresenting(ui) && getAiState(ui) === 'idle'}
+      interactive={interactive}
       onBackgroundClick={() => dispatch({ type: 'clearSelection' })}
     >
       <GroundLayer
@@ -58,7 +76,10 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
         selected={withSide(selected)}
         captureTargets={captureTargets}
         lastMove={lastMove}
-        checkedGeneral={game.inCheck ? findGeneral(game.board, game.turn) : null}
+        lastMoveSide={lastMoveSide}
+        checkedGeneral={checkedGeneral}
+        checkers={getCheckingPieces(game)}
+        defeatedGeneral={gameOver?.defeatedGeneral ?? null}
       />
       <PieceLayer
         placements={placements}
@@ -73,9 +94,12 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
             : null
         }
         landedAt={lastMove?.to ?? null}
+        actingSide={interactive ? game.turn : null}
+        alertAt={checkedGeneral}
         debug={debug}
       />
-      <MoveMarkers targets={emptyTargets} onSelectTarget={click} />
+      <MoveMarkers targets={emptyTargets} captureTargets={captureTargets} hovered={hovered} onSelectTarget={click} />
+      {gameOver && <GameOverBanner view={gameOver} onNewGame={() => dispatch({ type: 'newGame' })} />}
     </Board>
   );
 }
