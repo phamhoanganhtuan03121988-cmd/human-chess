@@ -6,8 +6,13 @@
   --debug-palace: #d6249f;
   --debug-river: rgba(0, 140, 255, 0.18);
   --debug-center: #00a86b;
-  --red: #c62828;
-  --blue: #1565c0;
+  --red: #b3261e;
+  --blue: #1e4fa3;
+  --gold-hi: #f6e3a1;
+  --gold: #c9a24a;
+  --gold-lo: #7a5a1c;
+  --wood-hi: #f7e7c1;
+  --wood-lo: #d9b77a;
   font-family: system-ui, sans-serif;
 }
 
@@ -53,14 +58,17 @@ body { background: var(--page-bg); color: #f5f0e6; }
 
 .board__svg, .board__layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .board__layer { pointer-events: none; }
-/* Layering: board SVG (lines, debug grid) < pieces < debug anchors. */
-.board__layer--pieces { z-index: 1; }
-.board__layer--debug { z-index: 2; }
+/* Layering: board SVG (lines, debug grid) < ground rings < pieces < badges < debug anchors. */
+.board__layer--ground { z-index: 1; }
+.board__layer--pieces { z-index: 2; }
+.board__layer--badges { z-index: 3; }
+.board__layer--debug { z-index: 4; }
 
 .board__line { stroke: var(--board-line); stroke-width: 0.025; stroke-linecap: square; }
 .board__frame { fill: none; stroke: var(--board-line); stroke-width: 0.05; }
 .board__mark { fill: none; stroke: var(--board-line); stroke-width: 0.02; }
 .board__river-text {
+  font-family: 'Noto Serif TC', 'Songti TC', 'STSong', 'PMingLiU', serif;
   fill: var(--board-line);
   font-size: 0.42px;
   text-anchor: middle;
@@ -82,7 +90,85 @@ body { background: var(--page-bg); color: #f5f0e6; }
 .board-anchor { position: absolute; }
 
 /* Pieces */
-.piece__img { display: block; width: auto; user-select: none; }
+.piece__img {
+  display: block;
+  width: auto;
+  user-select: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+.piece.is-hovered .piece__img { filter: brightness(1.08); }
+.piece.is-selected .piece__img--red { filter: drop-shadow(0 0 0.5cqw rgba(255, 196, 120, 0.95)) brightness(1.06); }
+.piece.is-selected .piece__img--blue { filter: drop-shadow(0 0 0.5cqw rgba(150, 200, 255, 0.95)) brightness(1.06); }
+
+/* Ground ring under the feet (hover / selected). */
+.piece-ring {
+  border-radius: 50%;
+  transition: opacity 120ms ease;
+}
+.piece-ring.is-hovered { border: 0.25cqw solid rgba(122, 90, 28, 0.45); }
+.piece-ring.is-selected {
+  border: 0.3cqw solid var(--gold-hi);
+  box-shadow: 0 0 1.2cqw 0.2cqw rgba(246, 227, 161, 0.85), inset 0 0 0.8cqw rgba(246, 227, 161, 0.6);
+}
+.piece-ring--red.is-selected { background: radial-gradient(closest-side, rgba(179, 38, 30, 0.28), transparent); }
+.piece-ring--blue.is-selected { background: radial-gradient(closest-side, rgba(30, 79, 163, 0.28), transparent); }
+
+/* Identification badge: wooden disc with a gilded rim, glyph in team color. */
+.piece-badge__slot { position: relative; display: flex; flex-direction: column; align-items: center; }
+.piece-badge {
+  pointer-events: auto;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: max(0.22cqw, 1.5px) solid var(--gold);
+  background: radial-gradient(circle at 35% 30%, var(--wood-hi), var(--wood-lo) 75%);
+  box-shadow:
+    0 0 0 max(0.12cqw, 1px) var(--gold-lo),
+    inset 0 max(0.12cqw, 1px) 0 rgba(255, 255, 255, 0.55),
+    inset 0 -0.15cqw 0.3cqw rgba(90, 60, 20, 0.35),
+    0 0.2cqw 0.45cqw rgba(0, 0, 0, 0.35);
+  font-family: 'Noto Serif TC', 'Songti TC', 'STSong', 'PMingLiU', 'MingLiU', serif;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.piece-badge--red { color: var(--red); }
+.piece-badge--blue { color: var(--blue); }
+.piece-badge.is-hovered { transform: translateY(-0.15cqw) scale(1.08); }
+.piece-badge.is-selected {
+  border-color: var(--gold-hi);
+  box-shadow:
+    0 0 0 max(0.12cqw, 1px) var(--gold-lo),
+    0 0 0.9cqw 0.15cqw rgba(246, 227, 161, 0.9),
+    inset 0 max(0.12cqw, 1px) 0 rgba(255, 255, 255, 0.55);
+}
+.piece-badge:focus { outline: none; }
+.piece-badge:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+/* Hover tooltip: Vietnamese name + character. */
+.piece-tooltip {
+  position: absolute;
+  top: calc(100% + max(0.4cqw, 3px));
+  white-space: nowrap;
+  padding: max(0.3cqw, 2px) max(0.8cqw, 6px);
+  border-radius: max(0.5cqw, 4px);
+  border: 1px solid var(--gold);
+  background: rgba(33, 26, 18, 0.92);
+  color: var(--gold-hi);
+  font-size: max(1.35cqw, 11px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0.3cqw 0.8cqw rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.piece-tooltip--above {
+  top: auto;
+  bottom: calc(100% + 15.5cqw);
+}
 .piece--debug { outline: 1px dashed rgba(16, 42, 67, 0.6); }
 
 /* Debug: piece anchor crosshair, drawn above the pieces. */

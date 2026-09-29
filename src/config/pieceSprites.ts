@@ -53,9 +53,26 @@ export const MAX_PIECE_RISE = Math.max(...Object.values(PIECE_HEIGHTS)) * PIECE_
 export const PIECE_HEADROOM = 0.8;
 
 /**
+ * Identification badge, in board units. Its top edge sits BADGE_OFFSET
+ * below the intersection (negative = tucked slightly under the feet), so it
+ * hangs on the file line directly beneath the piece, never in a cell.
+ */
+export const BADGE_SIZE = 0.3;
+export const BADGE_OFFSET = -0.03;
+/** Minimum on-screen badge size (px) so glyphs stay legible on small screens. */
+export const BADGE_MIN_PX = 15;
+
+/** Ground ring (hover / selected) under the feet, in board units. */
+export const RING_WIDTH = 0.82;
+export const RING_HEIGHT = 0.3;
+
+/**
  * Stacking order within the piece layer: pieces lower on screen (larger y)
  * are drawn in front of pieces behind them. Values are 1..10.
  */
 export function getPieceZIndex(y: number): number {
   return y + 1;
 }
+
+/** z-index for a hovered or selected piece: above every rank. */
+export const RAISED_PIECE_Z_INDEX = 11;
