@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
   FILES,
   MAX_X,
@@ -22,7 +22,12 @@ const POSITION_MARKS: [number, number][] = [
 interface BoardProps {
   /** Show the development debug overlay. */
   debug?: boolean;
-  /** Layers positioned on intersections (see BoardAnchor). */
+  /**
+   * Extra board surface above the grid, in board units, so tall pieces on
+   * the top rank stay inside the board frame. Does not affect coordinates.
+   */
+  headroom?: number;
+  /** Layers positioned on intersections (see BoardAnchor / PieceLayer). */
   children?: ReactNode;
 }
 
@@ -31,20 +36,28 @@ interface BoardProps {
  * board-unit coordinate space from layout.ts, so every intersection is at
  * getBoardPoint(x, y) regardless of rendered size.
  */
-export function Board({ debug = false, children }: BoardProps) {
+export function Board({ debug = false, headroom = 0, children }: BoardProps) {
+  const frameHeight = BOARD_HEIGHT + headroom;
+  const frameStyle = {
+    aspectRatio: `${BOARD_WIDTH} / ${frameHeight}`,
+    '--frame-aspect': BOARD_WIDTH / frameHeight,
+  } as CSSProperties;
+
   return (
-    <div className="board" data-testid="board">
-      <svg
-        className="board__svg"
-        viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
-        preserveAspectRatio="xMidYMid meet"
-        aria-label="Xiangqi board"
-        role="img"
-      >
-        <BoardLines />
-        {debug && <BoardDebugOverlay />}
-      </svg>
-      <div className="board__layer">{children}</div>
+    <div className="board-frame" style={frameStyle}>
+      <div className="board" data-testid="board">
+        <svg
+          className="board__svg"
+          viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
+          preserveAspectRatio="xMidYMid meet"
+          aria-label="Xiangqi board"
+          role="img"
+        >
+          <BoardLines />
+          {debug && <BoardDebugOverlay />}
+        </svg>
+        {children}
+      </div>
     </div>
   );
 }

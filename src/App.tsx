@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { INITIAL_POSITION } from './board/initialPosition.ts';
 import { Board } from './components/Board.tsx';
-import { DebugPieceMarkers } from './components/DebugPieceMarkers.tsx';
-import { arePieceMarkersEnabled, isBoardDebugEnabled } from './config/debug.ts';
+import { PieceLayer } from './components/PieceLayer.tsx';
+import { isBoardDebugEnabled } from './config/debug.ts';
+import { PIECE_HEADROOM } from './config/pieceSprites.ts';
 
 export function App() {
   const [debug, setDebug] = useState(isBoardDebugEnabled);
-  const [markers, setMarkers] = useState(arePieceMarkersEnabled);
 
   return (
     <main className="app">
@@ -14,11 +14,10 @@ export function App() {
         <label>
           <input type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} /> Board debug
         </label>
-        <label>
-          <input type="checkbox" checked={markers} onChange={(e) => setMarkers(e.target.checked)} /> Start markers
-        </label>
       </div>
-      <Board debug={debug}>{markers && <DebugPieceMarkers placements={INITIAL_POSITION} />}</Board>
+      <Board debug={debug} headroom={PIECE_HEADROOM}>
+        <PieceLayer placements={INITIAL_POSITION} debug={debug} />
+      </Board>
     </main>
   );
 }

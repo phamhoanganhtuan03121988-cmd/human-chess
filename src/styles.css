@@ -30,21 +30,32 @@ body { background: var(--page-bg); color: #f5f0e6; }
 .dev-toolbar { display: flex; gap: 16px; font-size: 14px; }
 
 /*
- * Board sizing: keeps the 9:10 aspect ratio (BOARD_WIDTH : BOARD_HEIGHT in
- * layout.ts) and fits within the viewport on desktop, tablet and mobile
- * landscape. Only the size changes; intersection positions are percentages.
+ * Board sizing: the frame is the 9:10 board (BOARD_WIDTH : BOARD_HEIGHT in
+ * layout.ts) plus piece headroom on top; its aspect ratio is set inline by
+ * <Board>. It fits the viewport on desktop, tablet and mobile landscape.
+ * Only the size changes; intersection positions are percentages of .board.
  */
-.board {
+.board-frame {
   position: relative;
-  aspect-ratio: 9 / 10;
-  width: min(100%, calc((100dvh - 56px) * 0.9));
+  width: min(100%, calc((100dvh - 56px) * var(--frame-aspect)));
   background: var(--board-bg);
   border-radius: 1.2%;
+}
+
+.board {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  aspect-ratio: 9 / 10;
   container-type: inline-size;
 }
 
 .board__svg, .board__layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .board__layer { pointer-events: none; }
+/* Layering: board SVG (lines, debug grid) < pieces < debug anchors. */
+.board__layer--pieces { z-index: 1; }
+.board__layer--debug { z-index: 2; }
 
 .board__line { stroke: var(--board-line); stroke-width: 0.025; stroke-linecap: square; }
 .board__frame { fill: none; stroke: var(--board-line); stroke-width: 0.05; }
@@ -67,37 +78,21 @@ body { background: var(--page-bg); color: #f5f0e6; }
 .debug__center line { stroke: var(--debug-center); stroke-width: 0.03; }
 .debug__center circle { fill: var(--debug-center); }
 
-/* Anchors: the child's center sits exactly on the intersection. */
-.board-anchor { position: absolute; transform: translate(-50%, -50%); }
+/* Anchors: position/transform are set inline by <BoardAnchor>. */
+.board-anchor { position: absolute; }
 
-/* TEMPORARY debug markers (not game pieces). Sized relative to board width. */
-.debug-marker {
-  position: relative;
-  width: 8cqw;
-  height: 8cqw;
+/* Pieces */
+.piece__img { display: block; width: auto; user-select: none; }
+.piece--debug { outline: 1px dashed rgba(16, 42, 67, 0.6); }
+
+/* Debug: piece anchor crosshair, drawn above the pieces. */
+.debug-anchor {
+  display: block;
+  width: 1.4cqw;
+  height: 1.4cqw;
   border-radius: 50%;
-  border: 0.35cqw solid currentColor;
-  background: rgba(255, 255, 255, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 0.3cqw solid #fff;
+  box-shadow: 0 0 0 0.15cqw #000;
 }
-.debug-marker--red { color: var(--red); }
-.debug-marker--blue { color: var(--blue); }
-.debug-marker__dot {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0.9cqw;
-  height: 0.9cqw;
-  border-radius: 50%;
-  background: currentColor;
-  transform: translate(-50%, -50%);
-}
-.debug-marker__label {
-  font-size: 1.3cqw;
-  font-weight: 700;
-  line-height: 1.1;
-  text-align: center;
-  transform: translateY(1.6cqw);
-}
+.debug-anchor--red { background: var(--red); }
+.debug-anchor--blue { background: var(--blue); }

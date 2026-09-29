@@ -1,13 +1,10 @@
 /**
- * Development-only debug switches. Remove or set to false once the board
- * is verified.
+ * Development-only debug switch. Off by default so the normal board shows
+ * only the real pieces.
  *
- * Can be overridden per page load with URL params:
- *   ?debug=0 / ?debug=1         board debug overlay
- *   ?markers=0 / ?markers=1     starting-position debug markers
+ * Can be overridden per page load with the URL param ?debug=1 / ?debug=0.
  */
-export const BOARD_DEBUG_DEFAULT = true;
-export const PIECE_MARKERS_DEFAULT = true;
+export const BOARD_DEBUG_DEFAULT = false;
 
 function readFlag(name: string, fallback: boolean): boolean {
   if (typeof window === 'undefined') return fallback;
@@ -19,8 +16,4 @@ function readFlag(name: string, fallback: boolean): boolean {
 
 export function isBoardDebugEnabled(): boolean {
   return readFlag('debug', BOARD_DEBUG_DEFAULT);
-}
-
-export function arePieceMarkersEnabled(): boolean {
-  return readFlag('markers', PIECE_MARKERS_DEFAULT);
 }
