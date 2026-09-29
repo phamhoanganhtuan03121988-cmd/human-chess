@@ -1,6 +1,7 @@
 import type { PieceSide } from '../config/assets.ts';
 import type { Move, Position } from '../engine/index.ts';
 import { BoardAnchor } from './BoardAnchor.tsx';
+import { LandingPulse } from './LandingPulse.tsx';
 import { PieceRing } from './PieceRing.tsx';
 import { boardUnits } from './Piece.tsx';
 
@@ -17,6 +18,10 @@ interface GroundLayerProps {
   checkers: readonly Position[];
   /** Losing General once the game is over. */
   defeatedGeneral: Position | null;
+  /** Winning General once the game is over (gold highlight). */
+  victorGeneral?: Position | null;
+  /** Key of the move that just committed; a fresh key plays the landing pulse. */
+  landingKey?: string | null;
 }
 
 const LAST_FROM_SIZE = 0.42;
@@ -31,6 +36,8 @@ export function GroundLayer({
   checkedGeneral,
   checkers,
   defeatedGeneral,
+  victorGeneral = null,
+  landingKey = null,
 }: GroundLayerProps) {
   const sideClass = lastMoveSide ? ` last-move--${lastMoveSide}` : '';
   return (
@@ -52,6 +59,8 @@ export function GroundLayer({
           <PieceRing x={lastMove.to.x} y={lastMove.to.y} variant="last-move" side={lastMoveSide ?? undefined} />
         </>
       )}
+      {lastMove && landingKey && <LandingPulse key={landingKey} at={lastMove.to} />}
+      {victorGeneral && <PieceRing x={victorGeneral.x} y={victorGeneral.y} variant="victor" />}
       {checkers.map((p) => (
         <PieceRing key={`k${p.x},${p.y}`} x={p.x} y={p.y} variant="checker" />
       ))}

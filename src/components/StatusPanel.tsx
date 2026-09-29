@@ -25,6 +25,17 @@ function mainText(status: Extract<StatusView, { kind: 'turn' }>, activity: Activ
   return `${side} TURN`;
 }
 
+/** A trailing "..." is kept in the text (screen readers, tests) but drawn as animated dots. */
+function renderMain(text: string) {
+  if (!text.endsWith('...')) return text;
+  return (
+    <>
+      {text.slice(0, -3)}
+      <span className="status__ellipsis">...</span>
+    </>
+  );
+}
+
 /** Short hint telling the player whether they can act. */
 function hintText(status: StatusView, activity: Activity, aiSide: Side | null): string {
   if (status.kind === 'over') return 'Game over — start a new game';
@@ -86,7 +97,14 @@ export function StatusPanel({ status, activity = 'idle', aiSide = null }: Status
         data-activity={activity}
       >
         <span className="status__dot" aria-hidden="true" />
-        <span className="status__main">{mainText(status, activity)}</span>
+        <span className="status__main">{renderMain(mainText(status, activity))}</span>
+        {(status.thinking || activity === 'thinking') && (
+          <span className="status__dots" data-testid="thinking-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        )}
         {status.thinking && status.check && <span className="status__check">IN CHECK</span>}
       </div>
       <span className={waiting ? 'status-hint status-hint--wait' : 'status-hint'} data-testid="status-hint">

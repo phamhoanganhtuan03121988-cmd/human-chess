@@ -263,17 +263,23 @@ describe('reduced motion', () => {
   });
 });
 
-describe('audio hooks (no-op by default)', () => {
-  it('calls move, impact, capture, check and game-over hooks at the right moments', () => {
-    const calls: string[] = [];
-    const spy: AudioBackend = {
-      playMove: () => calls.push('move'),
-      playCapture: () => calls.push('capture'),
-      playCombatImpact: (a, d) => calls.push(`impact:${a.side}-${a.type}>${d.side}-${d.type}`),
-      playCheck: () => calls.push('check'),
-      playGameOver: (w) => calls.push(`gameover:${w}`),
-    };
-    setAudioBackend(spy);
+/** Records every sound as "name" or "name:detail values". */
+function recordSounds(): string[] {
+  const calls: string[] = [];
+  const spy: AudioBackend = {
+    play(name, detail = {}) {
+      const d = Object.values(detail);
+      calls.push(d.length ? `${name}:${d.join(',')}` : name);
+      return true;
+    },
+  };
+  setAudioBackend(spy);
+  return calls;
+}
+
+describe('audio hooks', () => {
+  it('select, move start, landing and check sounds follow the game (once each)', () => {
+    const calls = recordSounds();
     render(
       <Harness
         game={position(`
@@ -289,32 +295,23 @@ describe('audio hooks (no-op by default)', () => {
           .....K...`)}
       />,
     );
-    // Rook to (0,4): normal move.
     fireEvent.click(img(0, 5)!);
+    expect(calls).toEqual(['select']);
     fireEvent.click(screen.getAllByTestId('move-marker').find((m) => m.dataset.x === '0' && m.dataset.y === '4')!);
-    expect(calls).toEqual([]); // still animating: nothing applied yet
+    expect(calls).toEqual(['select', 'move']); // leaves the source
     advance(300);
-    expect(calls).toEqual(['move']);
-    // Blue general steps aside, then Red mates with a capture-free move.
+    expect(calls).toEqual(['select', 'move', 'land']); // lands on the board
     fireEvent.click(img(3, 0)!);
     fireEvent.click(screen.getAllByTestId('move-marker').find((m) => m.dataset.x === '4' && m.dataset.y === '0')!);
     advance(300);
-    expect(calls).toEqual(['move', 'move']);
     fireEvent.click(img(8, 1)!);
     fireEvent.click(screen.getAllByTestId('move-marker').find((m) => m.dataset.x === '8' && m.dataset.y === '0')!);
     advance(300);
-    expect(calls.slice(2)).toEqual(['move', 'check']);
+    expect(calls.slice(3)).toEqual(['select', 'move', 'land', 'select', 'move', 'land', 'check']);
   });
 
-  it('plays impact during combat and capture/game-over when it resolves', () => {
-    const calls: string[] = [];
-    setAudioBackend({
-      playMove: () => calls.push('move'),
-      playCapture: () => calls.push('capture'),
-      playCombatImpact: (a, d) => calls.push(`impact:${a.side}-${a.type}>${d.side}-${d.type}`),
-      playCheck: () => calls.push('check'),
-      playGameOver: (w) => calls.push(`gameover:${w}`),
-    });
+  it('combat cues follow the timeline; impact + capture at 1000 ms; game over once at the end', () => {
+    const calls = recordSounds();
     captureWith(
       `
       ...k.....
@@ -331,11 +328,19 @@ describe('audio hooks (no-op by default)', () => {
       [4, 5],
       [4, 9],
     );
+    expect(calls).toEqual(['select', 'combatCue:open']);
     advance(999);
-    expect(calls).toEqual([]);
+    expect(calls.slice(2)).toEqual([
+      'combatCue:attacker',
+      'combatCue:defender',
+      'combatCue:vs',
+      'combatCue:tension',
+    ]);
     advance(1);
-    expect(calls).toEqual(['impact:blue-rook>red-general']);
+    expect(calls.slice(6)).toEqual(['impact:rook', 'capture:general']);
     advance(600);
-    expect(calls).toEqual(['impact:blue-rook>red-general', 'capture', 'gameover:blue']);
+    expect(calls.slice(8)).toEqual(['combatCue:decay', 'gameOver:general_captured']);
+    advance(3000);
+    expect(calls.filter((c) => c.startsWith('gameOver'))).toHaveLength(1);
   });
 });

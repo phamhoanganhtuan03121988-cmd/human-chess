@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { playCombatImpact } from '../../audio/index.ts';
+import { playCaptureSound, playCombatCue, playImpactSound } from '../../audio/index.ts';
+import type { CombatCue } from '../../audio/index.ts';
 import type { CombatState, UiAction } from '../../game/controller.ts';
 import { CombatCard } from './CombatCard.tsx';
 import { CombatImpact } from './CombatImpact.tsx';
@@ -27,11 +28,28 @@ export function CombatOverlay({ combat, dispatch }: CombatOverlayProps) {
 
   useEffect(() => {
     setStage('open');
-    const timers = STAGE_TIMES.map(([s, t]) => window.setTimeout(() => setStage(s), t));
+    playCombatCue('open'); // 0 ms: atmospheric transition
+    // Audio cues ride on the same timers as the visual stages, so they stay in sync.
+    const CUES: Partial<Record<CombatStage, CombatCue>> = {
+      attacker: 'attacker',
+      defender: 'defender',
+      vs: 'vs',
+      active: 'tension',
+      end: 'decay',
+    };
+    const timers = STAGE_TIMES.map(([s, t]) =>
+      window.setTimeout(() => {
+        setStage(s);
+        const cue = CUES[s];
+        if (cue) playCombatCue(cue);
+      }, t),
+    );
     timers.push(
       window.setTimeout(() => {
         dispatch({ type: 'combatPhase', id, phase: 'impact' });
-        playCombatImpact(attacker, defender);
+        // 1000 ms: main impact + the captured piece's crack, with the visual impact.
+        playImpactSound(attacker.type);
+        playCaptureSound(defender.type);
       }, COMBAT_TIMELINE.impact),
       window.setTimeout(() => dispatch({ type: 'combatPhase', id, phase: 'complete' }), COMBAT_TIMELINE.end),
       window.setTimeout(() => dispatch({ type: 'combatComplete', id }), COMBAT_TIMELINE.close),
@@ -63,6 +81,7 @@ export function CombatOverlay({ combat, dispatch }: CombatOverlayProps) {
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
       onClick={(e) => e.stopPropagation()}
     >
+      {impact && <div className={`combat-vignette combat-vignette--${attacker.side}`} data-testid="combat-vignette" />}
       {impact && <div className={`combat-flash combat-flash--${attacker.side}`} data-testid="combat-flash" />}
       <div className="combat-overlay__stage">
         <CombatCard

@@ -893,3 +893,148 @@ body::after {
   .piece-ring--hover, .piece-ring--selected, .piece-ring--check,
   .move-marker, .capture-reticle, .game-over { animation: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Step 11 — feedback FX (CSS only; every animation ends or is scoped  */
+/* to a temporary state).                                              */
+/* ------------------------------------------------------------------ */
+
+/* Movement: soft gilded glow while the piece travels (plus the existing shadow). */
+.piece__img.is-moving {
+  filter: drop-shadow(0 0.6cqw 0.5cqw rgba(0, 0, 0, 0.35)) drop-shadow(0 0 0.5cqw rgba(246, 227, 161, 0.55));
+}
+/* Landing: brief radial pulse on the destination intersection (~200 ms). */
+.landing-pulse {
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(246, 227, 161, 0.55), rgba(201, 162, 74, 0.25) 45%, transparent 70%);
+  border: 0.15cqw solid rgba(201, 162, 74, 0.6);
+  opacity: 0;
+  animation: landing-pulse 200ms ease-out both;
+}
+@keyframes landing-pulse {
+  0% { opacity: 0.9; transform: scale(0.35); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* Selection: the gold ring blooms outward, then settles (replaces the Step 10 pop). */
+.piece-ring--selected { animation: ring-bloom 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes ring-bloom {
+  0% { opacity: 0; transform: scale(0.75); box-shadow: 0 0 0 0 rgba(246, 227, 161, 0); }
+  55% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 2cqw 0.6cqw rgba(246, 227, 161, 0.85); }
+  100% { transform: none; }
+}
+/* Legal dots and capture crosshairs pulse gently twice, then settle. */
+.move-marker__dot { animation: dot-pulse 1.2s ease-in-out 180ms 2; }
+@keyframes dot-pulse {
+  50% { transform: scale(1.18); box-shadow: 0 0 0 0.18cqw rgba(255, 250, 235, 0.8), 0 0 0.8cqw rgba(95, 176, 127, 0.7); }
+}
+.capture-reticle { animation: marker-in 160ms ease-out both, reticle-pulse 1.2s ease-in-out 180ms 2; }
+@keyframes reticle-pulse {
+  50% { box-shadow: 0 0 1.3cqw rgba(220, 70, 50, 0.75); }
+}
+
+/* Capture: tinted edge vignette flash behind the combat cards (not a white-out). */
+.combat-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  animation: combat-vignette 420ms ease-out both;
+}
+.combat-vignette--red { background: radial-gradient(ellipse at center, transparent 45%, rgba(200, 70, 30, 0.55) 100%); }
+.combat-vignette--blue { background: radial-gradient(ellipse at center, transparent 45%, rgba(60, 110, 210, 0.55) 100%); }
+@keyframes combat-vignette {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Check: pulse once, then remain subtly highlighted. */
+.piece-ring--check { animation: check-pulse 700ms ease-in-out 1; position: relative; }
+.piece-ring--check::after {
+  /* Warning wave around the General, once. */
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  border: 0.25cqw solid rgba(235, 70, 50, 0.8);
+  opacity: 0;
+  animation: check-wave 800ms ease-out 1;
+}
+@keyframes check-wave {
+  0% { opacity: 0.9; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.piece-badge.is-alert { animation: alert-pulse 600ms ease-out 1; }
+@keyframes alert-pulse {
+  40% { transform: scale(1.22); box-shadow: 0 0 0 max(0.12cqw, 1px) #7a1a12, 0 0 1.6cqw rgba(240, 70, 50, 0.95); }
+}
+.piece-ring--checker { animation: checker-pulse 700ms ease-in-out 1; }
+@keyframes checker-pulse {
+  50% { box-shadow: 0 0 1.4cqw 0.3cqw rgba(230, 60, 45, 0.7); }
+}
+
+/* AI thinking: breathing glow on the status pill + three slow dots. */
+.status--thinking { animation: status-enter 240ms ease-out both, thinking-breathe 2.4s ease-in-out 240ms infinite; }
+@keyframes thinking-breathe {
+  50% { box-shadow: 0 0 14px currentColor; }
+}
+.status__ellipsis {
+  /* Kept in the text for screen readers / tests; drawn as the animated dots. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.status__dots { display: inline-flex; gap: 3px; margin-left: -4px; }
+.status__dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: thinking-dot 1.2s ease-in-out infinite;
+}
+.status__dots i:nth-child(2) { animation-delay: 0.2s; }
+.status__dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes thinking-dot {
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* Game over: smaller banner; gold highlight on the winner, defeat glow on the loser. */
+.game-over {
+  gap: 0.35cqw;
+  padding: 1.3cqw 3cqw 1.5cqw;
+  background: linear-gradient(180deg, rgba(40, 30, 20, 0.86), rgba(24, 18, 12, 0.84));
+  animation: banner-in 420ms cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
+}
+.game-over__title { font-size: max(2.6cqw, 14px); letter-spacing: 0.12em; }
+.game-over__winner { font-size: max(1.9cqw, 12px); }
+.game-over__detail { font-size: max(1.3cqw, 10px); }
+.game-over__button { margin-top: 0.4cqw; font-size: max(1.35cqw, 11px); padding: 0.35cqw 1.6cqw; }
+.piece-ring--victor {
+  border: 0.28cqw solid var(--gold-hi);
+  background: radial-gradient(closest-side, rgba(246, 227, 161, 0.4), transparent);
+  box-shadow: 0 0 1.6cqw 0.35cqw rgba(246, 227, 161, 0.7);
+  animation: ring-bloom 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.piece-ring--defeated { box-shadow: 0 0 1.4cqw 0.3cqw rgba(150, 30, 20, 0.55); }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-pulse,
+  .move-marker__dot,
+  .capture-reticle,
+  .piece-ring--check,
+  .piece-ring--check::after,
+  .piece-badge.is-alert,
+  .piece-ring--checker,
+  .piece-ring--victor,
+  .status--thinking,
+  .status__dots i { animation: none; }
+  .status__dots i { opacity: 0.8; }
+  .combat-vignette { animation: none; opacity: 0; }
+  .piece__img.is-moving { filter: none; }
+}
+.combat-overlay--reduced .combat-vignette { animation: none; opacity: 0; }

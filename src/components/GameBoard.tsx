@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { playHoverSound } from '../audio/index.ts';
 import { getPortraitAsset } from '../config/assets.ts';
 import { findGeneral, pieceAt } from '../engine/index.ts';
 import type { Position } from '../engine/index.ts';
@@ -80,13 +81,24 @@ export function GameBoard({ ui, dispatch, debug = false }: GameBoardProps) {
         checkedGeneral={checkedGeneral}
         checkers={getCheckingPieces(game)}
         defeatedGeneral={gameOver?.defeatedGeneral ?? null}
+        victorGeneral={gameOver ? findGeneral(game.board, gameOver.winner) : null}
+        landingKey={lastMove && !reducedMotion ? `${ui.gameId}:${game.history.length}` : null}
       />
       <PieceLayer
         placements={placements}
         hovered={hovered}
         selected={selected}
         captureTargets={captureTargets}
-        onHoverChange={setHovered}
+        onHoverChange={(p) => {
+          // Tick once when entering a new piece the player can act on.
+          if (p && interactive && (hovered?.x !== p.x || hovered?.y !== p.y)) {
+            const piece = pieceAt(game.board, p);
+            if (piece && (piece.side === game.turn || captureTargets.some((c) => c.x === p.x && c.y === p.y))) {
+              playHoverSound();
+            }
+          }
+          setHovered(p);
+        }}
         onClickPiece={click}
         moving={
           ui.movement

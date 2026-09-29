@@ -3,7 +3,15 @@ import { RING_HEIGHT, RING_WIDTH } from '../config/pieceSprites.ts';
 import { BoardAnchor } from './BoardAnchor.tsx';
 import { boardUnits } from './Piece.tsx';
 
-export type RingVariant = 'hover' | 'selected' | 'capture' | 'check' | 'checker' | 'defeated' | 'last-move';
+export type RingVariant =
+  | 'hover'
+  | 'selected'
+  | 'capture'
+  | 'check'
+  | 'checker'
+  | 'defeated'
+  | 'victor'
+  | 'last-move';
 
 interface PieceRingProps {
   x: number;
