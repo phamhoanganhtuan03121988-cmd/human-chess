@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PIECE_GLYPHS } from '../../src/config/pieceIdentity.ts';
 import { App } from '../../src/App.tsx';
 import { getIntersectionPosition } from '../../src/board/layout.ts';
 import { CombatOverlay } from '../../src/components/combat/CombatOverlay.tsx';
@@ -33,19 +34,27 @@ function Harness({ game }: { game: GameState }) {
 }
 
 const pieceImg = (x: number, y: number) =>
-  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+  document.querySelector<HTMLElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`);
 const markers = () => screen.queryAllByTestId('move-marker');
 const status = () => screen.getByTestId('status').textContent;
 
 describe('GameBoard UI', () => {
-  it('renders 32 pieces, each with its own side/type asset', () => {
+  it('renders 32 compact tokens, each with its side/type and Xiangqi character', () => {
     render(<App initialScreen="game" />);
-    const imgs = screen.getAllByTestId('piece') as HTMLImageElement[];
-    expect(imgs).toHaveLength(32);
-    for (const img of imgs) {
-      expect(new URL(img.src).pathname).toBe(`/assets/pieces/${img.dataset.side}/${img.dataset.type}.png`);
+    const tokens = screen.getAllByTestId('piece');
+    expect(tokens).toHaveLength(32);
+    for (const t of tokens) {
+      expect(t.tagName).toBe('BUTTON');
+      expect(t.className).toContain(`piece-token--${t.dataset.side}`);
+      expect(t.querySelector('img')).toBeNull(); // no character artwork on the board
+      const glyph = PIECE_GLYPHS[t.dataset.side as 'red' | 'blue'][t.dataset.type as keyof typeof PIECE_GLYPHS.red];
+      expect(t.textContent).toBe(glyph);
     }
-    expect(screen.getAllByTestId('piece-badge')).toHaveLength(32);
+    expect(document.querySelector('[data-type="advisor"][data-side="red"]')!.textContent).toBe('仕');
+    expect(document.querySelector('[data-type="general"][data-side="blue"]')!.textContent).toBe('將');
+    // Tokens sit centered on their intersection (not bottom-anchored like the old sprites).
+    const anchor = tokens[0]!.closest<HTMLElement>('.board-anchor')!;
+    expect(anchor.style.transform).toBe('translate(-50%, -50%)');
   });
 
   it('shows RED TURN at the start', () => {

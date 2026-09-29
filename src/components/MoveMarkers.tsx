@@ -6,7 +6,7 @@ import { boardUnits } from './Piece.tsx';
 const HIT_SIZE = 0.7;
 const DOT_SIZE = 0.2;
 /** Capture reticle diameter, in board units. */
-const RETICLE_SIZE = 0.62;
+const RETICLE_SIZE = 0.94;
 
 interface MoveMarkersProps {
   /** Legal destinations that are empty. */

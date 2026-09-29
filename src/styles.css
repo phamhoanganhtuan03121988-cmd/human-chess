@@ -821,7 +821,8 @@ body::after {
 /* ------------------------------------------------------------------ */
 .piece__img { transform-origin: 50% 95%; }
 .piece__img.is-moving,
-.piece-badge__slot.is-moving {
+.piece-badge__slot.is-moving,
+.piece-token.is-moving {
   /* `translate` carries the piece (ease-out); `transform` adds the slight lift. */
   animation:
     piece-travel var(--move-duration) var(--move-easing) both,
@@ -829,7 +830,8 @@ body::after {
 }
 .piece__img.is-moving { filter: drop-shadow(0 0.6cqw 0.5cqw rgba(0, 0, 0, 0.35)); }
 .piece__img.is-landing,
-.piece-badge__slot.is-landing { animation: piece-land 80ms ease-out both; }
+.piece-badge__slot.is-landing,
+.piece-token.is-landing { animation: piece-land 80ms ease-out both; }
 
 @keyframes piece-travel {
   from { translate: 0 0; }
@@ -850,8 +852,10 @@ body::after {
   /* Near-instant: no travel animation, lift, shadow or settle. */
   .piece__img.is-moving,
   .piece-badge__slot.is-moving,
+  .piece-token.is-moving,
   .piece__img.is-landing,
-  .piece-badge__slot.is-landing { animation: none; }
+  .piece-badge__slot.is-landing,
+  .piece-token.is-landing { animation: none; }
   .piece__img.is-moving { filter: none; }
 }
 
@@ -1327,15 +1331,8 @@ img { -webkit-user-drag: none; }
 .captures__label { flex: none; width: 70px; white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
 .captures__row--red .captures__label { color: #ff8a80; }
 .captures__row--blue .captures__label { color: #8ab4ff; }
-.captures__icons { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px 3px; }
-.captures__icons img {
-  height: 30px;
-  width: 24px;
-  object-fit: contain;
-  object-position: 50% 100%;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
-  animation: modal-in 220ms ease-out both;
-}
+.captures__icons { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 4px; }
+.captures__token { display: inline-flex; padding-bottom: 2px; animation: modal-in 220ms ease-out both; }
 .captures__none { opacity: 0.4; }
 .history {
   position: relative;
@@ -1368,7 +1365,7 @@ img { -webkit-user-drag: none; }
 .help__body .blue { color: #8ab4ff; }
 .help__pieces, .help__rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.45; }
 .help__pieces li { display: grid; grid-template-columns: 34px 52px 64px 1fr; align-items: center; gap: 8px; }
-.help__pieces img { height: 34px; width: auto; justify-self: center; }
+.help__pieces .piece-token { justify-self: center; }
 .help__glyphs { font-weight: 800; font-size: 16px; }
 .help__name { font-weight: 700; }
 .help__rules li { padding-left: 14px; position: relative; }
@@ -1378,7 +1375,6 @@ img { -webkit-user-drag: none; }
 @media (max-width: 560px) {
   .help__pieces li { grid-template-columns: 28px 60px 1fr; }
   .help__pieces .help__text { grid-column: 1 / -1; padding-left: 36px; margin-top: -4px; }
-  .help__pieces img { height: 28px; }
 }
 
 /* Game-over actions --------------------------------------------------------- */
@@ -1445,7 +1441,7 @@ img { -webkit-user-drag: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .modal-backdrop, .modal, .start-screen .modal, .hud__menu, .side-panel, .rotate-hint__icon, .captures__icons img { animation: none; }
+  .modal-backdrop, .modal, .start-screen .modal, .hud__menu, .side-panel, .rotate-hint__icon, .captures__token { animation: none; }
   .start-screen, .start-screen .modal { transition: none; }
   .btn, .toolbar__button, .game-over__button, .segmented__item { transition: none; }
   .btn:active, .toolbar__button:active, .game-over__button:active, .segmented__item:active { transform: none; }
@@ -1456,4 +1452,247 @@ img { -webkit-user-drag: none; }
 /* Touch screens have no hover: a tapped piece must not leave its name tooltip behind. */
 @media (hover: none) {
   .piece-tooltip { display: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 13 — board pieces as premium Xiangqi tokens.                   */
+/* Structure: button (faction ring + bevel + cast shadow) >            */
+/* .token-face (ivory face, engraved ring) > .token-face__glyph.       */
+/* Size comes from --token (≈0.72 of the intersection spacing).        */
+/* ------------------------------------------------------------------ */
+:root {
+  --token-ivory-hi: #fbf3df;
+  --token-ivory-lo: #e6d3aa;
+  --token-red-hi: #b8322a;
+  --token-red-lo: #6e1510;
+  --token-red-ink: #9e1b14;
+  --token-red-trim: #d9b25c;
+  --token-blue-hi: #2d5aa8;
+  --token-blue-lo: #132f63;
+  --token-blue-ink: #183f86;
+  --token-blue-trim: #c9d2dc;
+}
+.piece-token {
+  --ring-hi: var(--token-red-hi);
+  --ring-lo: var(--token-red-lo);
+  --ink: var(--token-red-ink);
+  --trim: var(--token-red-trim);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--token);
+  height: var(--token);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: default;
+  color: var(--ink);
+  font: inherit;
+  /* Faction ring: lacquered colour lit from the top-left. */
+  background: radial-gradient(circle at 34% 28%, var(--ring-hi), var(--ring-lo) 78%);
+  box-shadow:
+    /* metallic trim */
+    0 0 0 max(0.1cqw, 1px) var(--trim),
+    0 0 0 max(0.2cqw, 1.5px) rgba(40, 24, 10, 0.55),
+    /* token thickness (bevel edge) */
+    0 max(0.28cqw, 2px) 0 rgba(35, 20, 8, 0.75),
+    /* cast shadow on the board */
+    0 max(0.45cqw, 3px) max(0.6cqw, 4px) rgba(30, 18, 6, 0.45),
+    inset 0 max(0.1cqw, 1px) 0 rgba(255, 255, 255, 0.28);
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.piece-token--blue {
+  --ring-hi: var(--token-blue-hi);
+  --ring-lo: var(--token-blue-lo);
+  --ink: var(--token-blue-ink);
+  --trim: var(--token-blue-trim);
+}
+.token-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, var(--token-ivory-hi), var(--token-ivory-lo) 82%);
+  box-shadow:
+    inset 0 max(0.12cqw, 1px) max(0.2cqw, 1.5px) rgba(60, 35, 10, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+/* Engraved inner ring in the faction colour. */
+.token-face::before {
+  content: '';
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  border: max(0.08cqw, 1px) solid var(--ink);
+  opacity: 0.45;
+}
+.token-face__glyph {
+  position: relative;
+  font-family: 'Noto Serif TC', 'Songti TC', 'STSong', 'PMingLiU', 'MingLiU', serif;
+  font-weight: 700;
+  font-size: calc(var(--token) * 0.54);
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  /* Glyphs sit optically centred in the face. */
+  transform: translateY(-2%);
+}
+.piece-token.is-actionable { cursor: pointer; }
+.piece-token.is-hovered:not(.is-moving) { filter: brightness(1.08); transform: translateY(-1px); }
+/* Selected: gold/amber outer ring, slight lift, soft glow — clear but restrained. */
+.piece-token.is-selected {
+  transform: translateY(max(-0.3cqw, -3px));
+  box-shadow:
+    0 0 0 max(0.16cqw, 1.5px) var(--gold-hi),
+    0 0 0 max(0.34cqw, 3px) rgba(201, 150, 40, 0.9),
+    0 0 max(1.2cqw, 8px) max(0.2cqw, 2px) rgba(246, 210, 120, 0.7),
+    0 max(0.5cqw, 4px) 0 rgba(35, 20, 8, 0.6),
+    0 max(0.8cqw, 6px) max(0.8cqw, 6px) rgba(30, 18, 6, 0.4);
+}
+/* Enemy token the selected piece can take: crimson rim. */
+.piece-token.is-capturable {
+  box-shadow:
+    0 0 0 max(0.12cqw, 1px) var(--trim),
+    0 0 0 max(0.3cqw, 2.5px) var(--crimson),
+    0 0 max(0.8cqw, 6px) rgba(200, 50, 31, 0.6),
+    0 max(0.28cqw, 2px) 0 rgba(35, 20, 8, 0.75);
+}
+/* General in check: stronger than selection — red rim that pulses, then holds. */
+.piece-token.is-alert {
+  box-shadow:
+    0 0 0 max(0.14cqw, 1.5px) #ffd2c8,
+    0 0 0 max(0.36cqw, 3px) #d92a1c,
+    0 0 max(2cqw, 14px) max(0.5cqw, 4px) rgba(235, 50, 35, 0.8),
+    0 max(0.28cqw, 2px) 0 rgba(35, 20, 8, 0.75);
+  animation: token-alert 700ms ease-in-out 2;
+}
+@keyframes token-alert {
+  50% { transform: scale(1.1); }
+}
+.piece-token:focus { outline: none; }
+.piece-token:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
+.piece-token.is-moving { box-shadow: 0 0 0 max(0.1cqw, 1px) var(--trim), 0 max(0.9cqw, 6px) max(1cqw, 7px) rgba(30, 18, 6, 0.45), 0 0 max(0.8cqw, 6px) rgba(246, 227, 161, 0.55); }
+.piece-token--debug { outline: 1px dashed rgba(16, 42, 67, 0.7); }
+/* Static tokens (help, captured pieces, character card). */
+.piece-token--static {
+  display: inline-grid;
+  flex: none;
+  pointer-events: none;
+  vertical-align: middle;
+  box-shadow:
+    0 0 0 1px var(--trim),
+    0 0 0 2px rgba(40, 24, 10, 0.55),
+    0 2px 0 rgba(35, 20, 8, 0.7),
+    0 3px 5px rgba(0, 0, 0, 0.4);
+}
+
+/* Rings are now circles just around the token. */
+.piece-ring--selected { box-shadow: 0 0 0 0.2cqw rgba(122, 90, 28, 0.45), 0 0 1.1cqw 0.2cqw rgba(246, 227, 161, 0.6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .piece-token, .piece-token.is-alert { transition: none; animation: none; }
+  .piece-token.is-selected { transform: none; }
+}
+
+/* Character Action Card: the selected piece's portrait and movement. */
+.character-card {
+  --card-accent: var(--token-red-hi);
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 162, 74, 0.7);
+  background: linear-gradient(180deg, rgba(40, 29, 19, 0.96), rgba(22, 16, 11, 0.96));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 14px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(246, 227, 161, 0.12);
+  color: #f5f0e6;
+  overflow: hidden;
+  pointer-events: none;
+  animation: card-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.character-card--blue { --card-accent: var(--token-blue-hi); }
+.character-card::before {
+  /* Faction light along the top edge. */
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--card-accent), transparent);
+}
+.character-card__head { display: flex; align-items: center; gap: 10px; }
+.character-card__names { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex: 1; min-width: 0; }
+.character-card__title { font-weight: 900; font-size: 14px; letter-spacing: 0.12em; color: var(--gold-hi); white-space: nowrap; }
+.character-card__glyph {
+  font-family: 'Noto Serif TC', 'Songti TC', 'STSong', 'PMingLiU', serif;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1;
+  color: #ff8a80;
+}
+.character-card--blue .character-card__glyph { color: #9cc0ff; }
+.character-card__portrait {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 70px;
+  max-height: 260px;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, rgba(120, 88, 52, 0.5), rgba(20, 14, 9, 0.9));
+  box-shadow: inset 0 0 0 1px rgba(201, 162, 74, 0.5);
+}
+.character-card__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.character-card__portrait img.is-loaded { opacity: 1; }
+.character-card__body { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.character-card__row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.character-card__name { font-weight: 800; font-size: 15px; }
+.character-card__moves { font-size: 11px; letter-spacing: 0.06em; color: #9fd8b4; white-space: nowrap; }
+.character-card__rule { display: flex; align-items: flex-start; gap: 8px; }
+.character-card__rule p { margin: 0; font-size: 12px; line-height: 1.4; opacity: 0.9; }
+.move-diagram { width: 46px; height: 46px; flex: none; }
+.move-diagram__grid { stroke: rgba(246, 227, 161, 0.22); stroke-width: 1.5; }
+.move-diagram__path { stroke: #5fb07f; stroke-width: 5; stroke-linecap: round; }
+.move-diagram__dot { fill: #5fb07f; }
+.move-diagram__dot--alt { fill: none; stroke: #5fb07f; stroke-width: 3; }
+.move-diagram__piece { fill: var(--card-accent); stroke: var(--gold-hi); stroke-width: 3; }
+/* Over the move panel, or below the board: horizontal and compact. */
+.character-card--panel .character-card__portrait { max-height: 150px; }
+.character-card--below { flex-direction: row; flex-wrap: wrap; align-items: stretch; }
+.character-card--below .character-card__head { flex: 1 1 100%; }
+.character-card--below .character-card__portrait { flex: none; width: 72px; min-height: 0; height: 96px; }
+.character-card--below .character-card__body { flex: 1; min-width: 0; }
+@media (max-height: 460px) {
+  .character-card { padding: 8px; gap: 6px; }
+  .character-card__rule p { font-size: 11px; }
+  .move-diagram { width: 38px; height: 38px; }
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateX(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .character-card { animation: none; }
+  .character-card__portrait img { transition: none; }
+}
+
+/* The circular token rings are larger than the old ground ellipses: keep the
+   check wave modest and never let ground effects spill past the board edge. */
+.board__layer--ground { overflow: clip; }
+.piece-ring--check::after { inset: -4%; }
+@keyframes check-wave {
+  0% { opacity: 0.9; transform: scale(0.7); }
+  100% { opacity: 0; transform: scale(1.25); }
 }

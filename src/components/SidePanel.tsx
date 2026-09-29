@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { getPieceAsset } from '../config/assets.ts';
 import type { MoveRecord } from '../engine/index.ts';
 import { capturedPieces, historyRows } from '../game/notation.ts';
+import { StaticToken } from './PieceToken.tsx';
 
 interface SidePanelProps {
   history: readonly MoveRecord[];
@@ -40,7 +40,9 @@ export function SidePanel({ history, currentPly = null }: SidePanelProps) {
             <span className="captures__icons">
               {captured[side].length === 0 && <span className="captures__none">—</span>}
               {captured[side].map((p, i) => (
-                <img key={i} src={getPieceAsset(p.side, p.type)} alt={`${p.side} ${p.type}`} data-testid="captured-icon" />
+                <span key={i} className="captures__token" data-testid="captured-icon" title={`${p.side} ${p.type}`}>
+                  <StaticToken side={p.side} type={p.type} size="22px" />
+                </span>
               ))}
             </span>
           </div>

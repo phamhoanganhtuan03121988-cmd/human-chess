@@ -29,12 +29,12 @@ function Harness({ game }: { game: GameState }) {
 
 const pieceAt = (x: number, y: number) => {
   const img = document.querySelector<HTMLImageElement>(
-    `.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`,
+    `.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`,
   );
   return img ? `${img.dataset.side} ${img.dataset.type}` : null;
 };
 const clickPiece = (x: number, y: number) =>
-  fireEvent.click(document.querySelector(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`)!);
+  fireEvent.click(document.querySelector(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`)!);
 const overlay = () => screen.queryByTestId('combat-overlay');
 const advance = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
 const status = () => screen.getByTestId('status').textContent;

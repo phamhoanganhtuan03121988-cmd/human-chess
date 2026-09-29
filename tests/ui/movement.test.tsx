@@ -44,7 +44,7 @@ function Harness({ game, aiSide = 'blue' }: { game?: GameState; aiSide?: Side | 
 }
 
 const img = (x: number, y: number) =>
-  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+  document.querySelector<HTMLElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`);
 const pieceAt = (x: number, y: number) => {
   const i = img(x, y);
   return i ? `${i.dataset.side} ${i.dataset.type}` : null;
@@ -73,7 +73,7 @@ describe('movement animation (UI)', () => {
     expect(piece.style.getPropertyValue('--move-y')).toBe(`${-100 / 9}cqw`);
     expect(piece.style.getPropertyValue('--move-duration')).toBe('240ms');
     expect(piece.style.getPropertyValue('--move-easing')).toBe('cubic-bezier(0.22, 1, 0.36, 1)');
-    expect(document.querySelector('.piece-badge__slot.is-moving')).not.toBeNull(); // badge travels too
+    expect(piece.tagName).toBe('BUTTON'); // the token itself travels (glyph included)
     expect(pieceAt(4, 5)).toBeNull();
     expect(screen.queryByTestId('ring-last-move')).toBeNull(); // not before arrival
     expect(screen.queryAllByTestId('move-marker')).toHaveLength(0);

@@ -46,7 +46,7 @@ function Harness({ game, aiSide = null }: { game: GameState; aiSide?: Side | nul
 }
 
 const img = (x: number, y: number) =>
-  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+  document.querySelector<HTMLElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`);
 const pieceAt = (x: number, y: number) => {
   const i = img(x, y);
   return i ? `${i.dataset.side} ${i.dataset.type}` : null;

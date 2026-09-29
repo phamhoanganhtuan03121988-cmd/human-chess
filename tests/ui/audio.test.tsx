@@ -52,7 +52,7 @@ function Harness({ game, aiSide = null }: { game?: GameState; aiSide?: Side | nu
 }
 
 const img = (x: number, y: number) =>
-  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+  document.querySelector<HTMLElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`);
 const advance = (ms: number) => {
   for (let t = 0; t < ms; t += 20) act(() => void vi.advanceTimersByTime(Math.min(20, ms - t)));
 };

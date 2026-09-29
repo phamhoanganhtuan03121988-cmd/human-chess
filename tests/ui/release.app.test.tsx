@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 const img = (x: number, y: number) =>
-  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+  document.querySelector<HTMLElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`);
 const marker = (x: number, y: number) =>
   screen.getAllByTestId('move-marker').find((m) => m.dataset.x === `${x}` && m.dataset.y === `${y}`)!;
 const advance = (ms: number) => {
@@ -184,7 +184,7 @@ describe('game over, result and replay', () => {
     expect(screen.queryByTestId('game-over')).toBeNull();
     // Auto-play: the first recorded move animates, then commits.
     advance(400 + 20);
-    expect(document.querySelector('img[data-moving="true"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="piece"][data-moving="true"]')).not.toBeNull();
     advance(400);
     expect(count()).toBe('Nước 1/47');
     expect(img(1, 0)!.dataset.side).toBe('red'); // [1,7 → 1,0]: Red cannon took the Blue horse
@@ -270,7 +270,7 @@ describe('help dialog', () => {
       expect(dialog.textContent).toContain(text);
     }
     expect(dialog.textContent).toMatch(/Tướng.*đối mặt|lộ mặt tướng/i);
-    expect(dialog.querySelectorAll('.help__pieces img')).toHaveLength(7);
+    expect(dialog.querySelectorAll('.help__pieces .piece-token')).toHaveLength(7);
     const close = screen.getByLabelText('Đóng hướng dẫn');
     expect(document.activeElement).toBe(close);
     // Focus trap: Shift+Tab from the first control wraps to the last one inside the dialog.

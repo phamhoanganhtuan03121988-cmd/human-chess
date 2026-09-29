@@ -3,7 +3,7 @@ import { playHoverSound } from '../audio/index.ts';
 import { getPortraitAsset } from '../config/assets.ts';
 import { findGeneral, pieceAt } from '../engine/index.ts';
 import type { Position } from '../engine/index.ts';
-import { PIECE_HEADROOM } from '../config/pieceSprites.ts';
+import { TOKEN_HEADROOM } from '../config/pieceSprites.ts';
 import type { UiAction, UiState } from '../game/controller.ts';
 import {
   getActivity,
@@ -74,7 +74,7 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
       combat={ui.combat !== null}
       shakePx={shakePx}
       debug={debug}
-      headroom={PIECE_HEADROOM}
+      headroom={TOKEN_HEADROOM}
       interactive={interactive}
       onBackgroundClick={() => dispatch({ type: 'clearSelection' })}
     >

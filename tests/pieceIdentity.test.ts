@@ -8,7 +8,7 @@ import { BADGE_OFFSET, BADGE_SIZE, PIECE_HEIGHTS, RAISED_PIECE_Z_INDEX, getPiece
 describe('piece identity', () => {
   it('uses the traditional characters for each side', () => {
     expect(PIECE_GLYPHS.red).toEqual({
-      general: '帥', advisor: '士', elephant: '相', rook: '車', knight: '馬', cannon: '炮', pawn: '兵',
+      general: '帥', advisor: '仕', elephant: '相', rook: '車', knight: '馬', cannon: '炮', pawn: '兵',
     });
     expect(PIECE_GLYPHS.blue).toEqual({
       general: '將', advisor: '士', elephant: '象', rook: '車', knight: '馬', cannon: '炮', pawn: '卒',

@@ -8,7 +8,7 @@ import type { PieceSide, PieceType } from './assets.ts';
 export const PIECE_GLYPHS: Readonly<Record<PieceSide, Readonly<Record<PieceType, string>>>> = {
   red: {
     general: '帥',
-    advisor: '士',
+    advisor: '仕',
     elephant: '相',
     rook: '車',
     knight: '馬',
@@ -24,6 +24,20 @@ export const PIECE_GLYPHS: Readonly<Record<PieceSide, Readonly<Record<PieceType,
     cannon: '炮',
     pawn: '卒',
   },
+};
+
+/** Side names shown with a piece, e.g. "MÃ ĐỎ". */
+export const SIDE_NAMES_VI: Readonly<Record<PieceSide, string>> = { red: 'ĐỎ', blue: 'XANH' };
+
+/** How each piece moves (help dialog, character card). */
+export const PIECE_MOVES_VI: Readonly<Record<PieceType, string>> = {
+  general: 'Đi 1 ô ngang hoặc dọc, chỉ trong Cửu cung.',
+  advisor: 'Đi 1 ô chéo, chỉ trong Cửu cung.',
+  elephant: 'Đi chéo đúng 2 ô; không qua sông; bị chặn nếu ô giữa có quân ("mắt tượng").',
+  knight: 'Đi hình chữ L; bị chặn nếu ô liền kề theo hướng đi có quân ("cản chân mã").',
+  rook: 'Đi ngang/dọc bao xa cũng được, không nhảy qua quân.',
+  cannon: 'Đi như Xe; khi ăn quân phải nhảy qua đúng 1 quân (ngòi).',
+  pawn: 'Đi thẳng 1 ô; qua sông được đi ngang; không bao giờ lùi.',
 };
 
 /** Vietnamese piece names (cờ tướng). */

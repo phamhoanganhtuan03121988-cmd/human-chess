@@ -1,5 +1,5 @@
 import type { PieceSide } from '../config/assets.ts';
-import { RING_HEIGHT, RING_WIDTH } from '../config/pieceSprites.ts';
+import { TOKEN_RING_SIZE } from '../config/pieceSprites.ts';
 import { BoardAnchor } from './BoardAnchor.tsx';
 import { boardUnits } from './Piece.tsx';
 
@@ -20,7 +20,7 @@ interface PieceRingProps {
   side?: PieceSide;
 }
 
-/** Ground ring centered on an intersection, drawn under the character's feet. */
+/** Ground ring centered on an intersection, drawn just around the piece token. */
 export function PieceRing({ x, y, variant, side }: PieceRingProps) {
   const classes = ['piece-ring', `piece-ring--${variant}`, side && `piece-ring--${side}`];
   return (
@@ -31,7 +31,7 @@ export function PieceRing({ x, y, variant, side }: PieceRingProps) {
         data-x={x}
         data-y={y}
         data-side={side}
-        style={{ width: boardUnits(RING_WIDTH), height: boardUnits(RING_HEIGHT) }}
+        style={{ width: boardUnits(TOKEN_RING_SIZE), height: boardUnits(TOKEN_RING_SIZE) }}
       />
     </BoardAnchor>
   );

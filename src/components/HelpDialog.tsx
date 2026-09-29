@@ -1,17 +1,9 @@
-import { getPieceAsset } from '../config/assets.ts';
 import type { PieceType } from '../config/assets.ts';
-import { PIECE_GLYPHS, PIECE_NAMES_VI } from '../config/pieceIdentity.ts';
+import { PIECE_GLYPHS, PIECE_MOVES_VI, PIECE_NAMES_VI } from '../config/pieceIdentity.ts';
+import { StaticToken } from './PieceToken.tsx';
 import { Modal } from './ui/Modal.tsx';
 
-const PIECES: { type: PieceType; text: string }[] = [
-  { type: 'general', text: 'Đi 1 ô ngang hoặc dọc, chỉ trong Cửu cung.' },
-  { type: 'advisor', text: 'Đi 1 ô chéo, chỉ trong Cửu cung.' },
-  { type: 'elephant', text: 'Đi chéo đúng 2 ô; không qua sông; bị chặn nếu ô giữa có quân ("mắt tượng").' },
-  { type: 'knight', text: 'Đi hình chữ L; bị chặn nếu ô liền kề theo hướng đi có quân ("cản chân mã").' },
-  { type: 'rook', text: 'Đi ngang/dọc bao xa cũng được, không nhảy qua quân.' },
-  { type: 'cannon', text: 'Đi như Xe; khi ăn quân phải nhảy qua đúng 1 quân (ngòi).' },
-  { type: 'pawn', text: 'Đi thẳng 1 ô; qua sông được đi ngang; không bao giờ lùi.' },
-];
+const PIECE_ORDER: PieceType[] = ['general', 'advisor', 'elephant', 'knight', 'rook', 'cannon', 'pawn'];
 
 /** How to play: goal, pieces and special rules. Does not affect the game. */
 export function HelpDialog({ onClose }: { onClose: () => void }) {
@@ -36,9 +28,9 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
         <section>
           <h3>Các quân cờ</h3>
           <ul className="help__pieces">
-            {PIECES.map(({ type, text }) => (
+            {PIECE_ORDER.map((type) => (
               <li key={type}>
-                <img src={getPieceAsset('red', type)} alt="" aria-hidden="true" />
+                <StaticToken side="red" type={type} size="30px" />
                 <span className="help__glyphs">
                   <span className="red">{PIECE_GLYPHS.red[type]}</span>
                   {PIECE_GLYPHS.blue[type] !== PIECE_GLYPHS.red[type] && (
@@ -49,7 +41,7 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
                   )}
                 </span>
                 <span className="help__name">{PIECE_NAMES_VI[type]}</span>
-                <span className="help__text">{text}</span>
+                <span className="help__text">{PIECE_MOVES_VI[type]}</span>
               </li>
             ))}
           </ul>

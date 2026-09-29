@@ -39,7 +39,7 @@ function Harness({ game, aiSide = null }: { game?: GameState; aiSide?: Side | nu
 }
 
 const img = (x: number, y: number) =>
-  document.querySelector<HTMLImageElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] img`);
+  document.querySelector<HTMLElement>(`.board__layer--pieces .board-anchor[data-x="${x}"][data-y="${y}"] [data-testid="piece"]`);
 const advance = (ms: number) => {
   for (let t = 0; t < ms; t += 20) act(() => void vi.advanceTimersByTime(Math.min(20, ms - t)));
 };
@@ -167,7 +167,7 @@ describe('10.4 check / game over presentation', () => {
     render(<Harness game={game} />);
     expectCentered(screen.getByTestId('ring-check'), 4, 9);
     expectCentered(screen.getByTestId('ring-checker'), 4, 5);
-    const badge = document.querySelector('[data-testid="piece-badge"][data-side="red"][data-type="general"]')!;
+    const badge = document.querySelector('[data-testid="piece"][data-side="red"][data-type="general"]')!;
     expect(badge.className).toContain('is-alert');
   });
 

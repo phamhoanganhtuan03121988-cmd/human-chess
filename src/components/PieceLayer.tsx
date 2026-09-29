@@ -2,8 +2,7 @@ import type { CSSProperties } from 'react';
 import type { PiecePlacement } from '../board/initialPosition.ts';
 import type { Position } from '../engine/index.ts';
 import { BoardAnchor } from './BoardAnchor.tsx';
-import { Piece } from './Piece.tsx';
-import { PieceBadge } from './PieceBadge.tsx';
+import { PieceToken } from './PieceToken.tsx';
 
 interface PieceLayerProps {
   /** Pieces derived from the engine GameState. */
@@ -30,8 +29,9 @@ const at = (list: readonly Position[], p: Position) => list.some((q) => q.x === 
 const eq = (a: Position | null, b: Position) => a !== null && a.x === b.x && a.y === b.y;
 
 /**
- * Renders the pieces (characters, then badges above them), all anchored to
- * each piece's intersection. Purely presentational: clicks are reported
+ * Renders the pieces as Xiangqi tokens, each centered on its intersection.
+ * (The character sprites in Piece.tsx / PieceBadge.tsx are kept for the
+ * previous presentation but are no longer drawn on the board.) Purely presentational: clicks are reported
  * with the board position and handled by the game controller.
  */
 export function PieceLayer({
@@ -64,12 +64,7 @@ export function PieceLayer({
     <>
       <div className="board__layer board__layer--pieces">
         {placements.map((p) => (
-          <Piece key={key(p)} {...p} debug={debug} {...interaction(p)} />
-        ))}
-      </div>
-      <div className="board__layer board__layer--badges">
-        {placements.map((p) => (
-          <PieceBadge key={key(p)} {...p} {...interaction(p)} />
+          <PieceToken key={key(p)} {...p} debug={debug} {...interaction(p)} />
         ))}
       </div>
       {debug && (

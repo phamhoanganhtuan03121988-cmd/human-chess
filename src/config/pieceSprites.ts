@@ -76,3 +76,18 @@ export function getPieceZIndex(y: number): number {
 
 /** z-index for a hovered or selected piece: above every rank. */
 export const RAISED_PIECE_Z_INDEX = 11;
+
+/* ------------------------------------------------------------------ */
+/* Board tokens (Step 13). The board now shows compact Xiangqi tokens   */
+/* centered on each intersection; the character PNG sprites above are   */
+/* kept (unused on the board) so the previous presentation can return. */
+/* ------------------------------------------------------------------ */
+
+/** Token diameter in board units (1 = distance between intersections). */
+export const TOKEN_SIZE = 0.72;
+/** Minimum on-screen token diameter (px) so glyphs stay legible. */
+export const TOKEN_MIN_PX = 18;
+/** Ground rings (hover, selected, last move, check…) around a token. */
+export const TOKEN_RING_SIZE = 0.92;
+/** Tokens never rise above their intersection: no extra board headroom. */
+export const TOKEN_HEADROOM = 0;

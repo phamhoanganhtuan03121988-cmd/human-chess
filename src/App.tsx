@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Difficulty } from './ai/difficulty.ts';
 import { initAudio, toggleSound } from './audio/index.ts';
+import { CharacterActionCard } from './components/CharacterActionCard.tsx';
 import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { ConfirmNewGameDialog } from './components/ConfirmDialog.tsx';
 import { GameBoard } from './components/GameBoard.tsx';
@@ -10,6 +11,7 @@ import { ReplayView } from './components/ReplayView.tsx';
 import { SidePanel } from './components/SidePanel.tsx';
 import { StartScreen } from './components/StartScreen.tsx';
 import { isBoardDebugEnabled } from './config/debug.ts';
+import { pieceAt } from './engine/index.ts';
 import {
   createUiState,
   getActivity,
@@ -103,6 +105,8 @@ export function App({ initialScreen = 'start' }: AppProps) {
   };
 
   const gameOver = ui.game.status !== 'playing';
+  // Character card for the selected piece (the board itself shows plain tokens).
+  const selectedPiece = inGame && !replaying && ui.selected ? pieceAt(ui.game.board, ui.selected) : null;
   const newGameDisabled = presenting || aiState === 'thinking';
   const requestNewGame = () => {
     if (newGameDisabled) return;
@@ -165,6 +169,14 @@ export function App({ initialScreen = 'start' }: AppProps) {
           </>
         )}
       </main>
+      {selectedPiece && (
+        <CharacterActionCard
+          key={`${selectedPiece.side}-${selectedPiece.type}`}
+          side={selectedPiece.side}
+          type={selectedPiece.type}
+          moveCount={ui.legalMoves.length}
+        />
+      )}
       {ui.combat && !replaying && <CombatOverlay key={ui.combat.id} combat={ui.combat} dispatch={dispatch} />}
       {screen === 'start' && (
         <StartScreen
