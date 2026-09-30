@@ -85,9 +85,9 @@ export function isAmbienceRunning(): boolean {
 // ---- Background music --------------------------------------------------
 
 /**
- * Expected location of the soundtrack (public/assets/audio/). Instrumental,
- * restrained wuxia / guzheng-style loop of ~2–4 minutes. Until the file is
- * supplied the music layer reports 'unavailable' and stays silent.
+ * The soundtrack (public/assets/audio/xiangqi-theme.mp3): an instrumental
+ * wuxia-style loop (~3 min 13 s, 48 kHz stereo MP3). If it ever fails to
+ * load, the music layer reports 'unavailable' and stays silent.
  */
 export const MUSIC_TRACK_URL = '/assets/audio/xiangqi-theme.mp3';
 
