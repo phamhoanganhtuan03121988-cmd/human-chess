@@ -5,7 +5,8 @@
  *   npm run build && npm run server        # http://localhost:8787
  *
  * Environment:
- *   PORT              listen port (default 8787)
+ *   PORT              listen port (default 8787; hosts such as Render set it)
+ *   HOST              interface to bind (default 0.0.0.0, i.e. reachable from outside the container)
  *   DIST_DIR          built frontend to serve (default ./dist; set SERVE_STATIC=0 to disable)
  *   ALLOWED_ORIGINS   comma-separated origins allowed to open /ws (e.g. the Vercel frontend URL);
  *                     unset = any origin (local development)
@@ -23,6 +24,7 @@ import { MAX_MESSAGE_BYTES } from '../src/multiplayer/protocol.ts';
 import { RoomServer } from '../src/multiplayer/room.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
+const HOST = process.env.HOST ?? '0.0.0.0';
 const DIST = resolve(process.env.DIST_DIR ?? 'dist');
 const SERVE_STATIC = process.env.SERVE_STATIC !== '0';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
@@ -47,6 +49,11 @@ const MIME: Record<string, string> = {
 
 function serveStatic(req: IncomingMessage, res: ServerResponse): void {
   const url = new URL(req.url ?? '/', 'http://localhost');
+  // Health check for the host (e.g. Render's Health Check Path).
+  if (url.pathname === '/health') {
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end('{"status":"ok"}');
+    return;
+  }
   if (url.pathname === '/healthz') {
     res.writeHead(200, { 'content-type': 'text/plain' }).end(`ok rooms=${rooms.roomCount}`);
     return;
@@ -133,6 +140,7 @@ setInterval(() => {
 }, 30_000).unref();
 setInterval(() => rooms.sweep(), 60_000).unref();
 
-http.listen(PORT, () => {
-  console.log(`Cờ Tướng server on http://localhost:${PORT}  (ws: /ws, static: ${SERVE_STATIC ? DIST : 'off'})`);
+http.listen(PORT, HOST, () => {
+  const origins = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS.join(', ') : 'any';
+  console.log(`Cờ Tướng server on ${HOST}:${PORT}  (ws: /ws, origins: ${origins}, static: ${SERVE_STATIC ? DIST : 'off'})`);
 });

@@ -35,7 +35,8 @@ npm run server       # http://localhost:8787 — open two browsers to play
 
 | Variable | Where | Purpose |
 | --- | --- | --- |
-| `PORT` | server | listen port (default 8787) |
+| `PORT` | server | listen port (default 8787; set by the host on Render) |
+| `HOST` | server | interface to bind (default `0.0.0.0`) |
 | `ALLOWED_ORIGINS` | server | comma-separated origins allowed to open `/ws` (set it in production) |
 | `DIST_DIR` / `SERVE_STATIC=0` | server | where the built game is / serve only `/ws` |
 | `VITE_MULTIPLAYER_URL` | frontend build | WebSocket URL of the room server when the game is hosted elsewhere (public, not a secret) |
@@ -45,6 +46,23 @@ Railway or any VPS with Node ≥ 22.6). With the game on **Vercel**: deploy the
 frontend as usual (`vercel.json` rewrites `/room/*` to the app), run the room
 server on a Node host, set `VITE_MULTIPLAYER_URL=wss://…/ws` in the Vercel
 project and `ALLOWED_ORIGINS=https://<your-vercel-domain>` on the server.
+
+Health check: `GET /health` → `200 {"status":"ok"}`.
+
+#### Render (Free Web Service)
+
+| Setting | Value |
+| --- | --- |
+| Runtime | Node (version from `.node-version`: 22) |
+| Build Command | `npm ci --omit=dev` |
+| Start Command | `npm run server` |
+| Health Check Path | `/health` |
+| Environment | `SERVE_STATIC=0`, `ALLOWED_ORIGINS=https://human-chess.vercel.app` |
+
+Then set `VITE_MULTIPLAYER_URL=wss://<service>.onrender.com/ws` in the Vercel
+project and redeploy the frontend. A free service sleeps when idle (the first
+connection after a pause waits for it to wake up) and every restart or deploy
+clears the in-memory rooms.
 
 Vercel Functions now accept WebSockets (public beta), but connections are not
 guaranteed to reach the same instance, so rooms would need an external store
