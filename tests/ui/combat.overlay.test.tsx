@@ -4,6 +4,7 @@ import { useReducer } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App.tsx';
 import { CombatOverlay } from '../../src/components/combat/CombatOverlay.tsx';
+import { CAPTURE_CONTEXT } from '../../src/components/combat/combatTimeline.ts';
 import { GameBoard } from '../../src/components/GameBoard.tsx';
 import { StatusPanel } from '../../src/components/StatusPanel.tsx';
 import type { GameState } from '../../src/engine/index.ts';
@@ -47,6 +48,15 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     clickPiece(1, 7); // 1. select red cannon
     expect(screen.getAllByTestId('ring-capture').map((r) => `${r.dataset.x},${r.dataset.y}`)).toEqual(['1,0']); // 2.
     clickPiece(1, 0); // 3. click blue knight
+
+    // 3b. the board first shows who attacks whom and where, then the overlay opens
+    expect(overlay()).toBeNull();
+    const ctx = screen.getByTestId('capture-context');
+    expect([ctx.dataset.from, ctx.dataset.to]).toEqual(['1,7', '1,0']);
+    expect(screen.getByTestId('capture-label').textContent).toContain('PHÁO ĐỎ');
+    expect(screen.getByTestId('capture-label').textContent).toContain('MÃ XANH');
+    advance(CAPTURE_CONTEXT.end);
+    expect(screen.queryByTestId('capture-context')).toBeNull();
 
     // 4-5. board frozen, overlay open, nothing applied yet
     expect(overlay()).not.toBeNull();
@@ -96,6 +106,7 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
 
     // The AI replies (possibly with its own combat), then control returns to Red.
     advance(800);
+    if (screen.queryByTestId('capture-context')) advance(CAPTURE_CONTEXT.end);
     if (overlay()) advance(1600);
     expect(overlay()).toBeNull();
     expect(status()).toBe('LƯỢT ĐỎ');
@@ -106,6 +117,7 @@ describe('combat overlay: Red Cannon captures Blue Knight', () => {
     render(<App initialScreen="game" />);
     clickPiece(1, 7);
     clickPiece(1, 0);
+    advance(CAPTURE_CONTEXT.end);
     advance(500);
     clickPiece(0, 9); // another red piece
     clickPiece(4, 6);
@@ -218,6 +230,8 @@ describe('combat overlay: other captures', () => {
       const [dSide, dType] = c.defender.split('/');
       clickPiece(...c.from);
       clickPiece(...c.to);
+      expect(screen.getByTestId('capture-context')).toBeTruthy();
+      advance(CAPTURE_CONTEXT.end);
       expect(overlay()).not.toBeNull();
       expect(portrait('attacker')).toBe(`/assets/portraits/${c.attacker}.png`);
       expect(portrait('defender')).toBe(`/assets/portraits/${c.defender}.png`);

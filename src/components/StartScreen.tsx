@@ -42,15 +42,17 @@ export function StartScreen({ difficulty, onDifficulty, canResume, onPlay, onRes
             CHƠI NGAY
           </button>
         )}
-        <div className="start__row">
-          <span className="start__label" id="start-difficulty">
-            ĐỘ KHÓ
-          </span>
-          <DifficultyPicker value={difficulty} onChange={onDifficulty} variant="segmented" />
-        </div>
-        <div className="start__row">
-          <span className="start__label">ÂM THANH</span>
-          <SoundToggle />
+        <div className="start__settings">
+          <label className="start__row" htmlFor="start-difficulty">
+            <span className="start__label">Độ khó</span>
+            <DifficultyPicker id="start-difficulty" value={difficulty} onChange={onDifficulty} />
+          </label>
+          <div className="start__row">
+            <span className="start__label" id="start-sound-label">
+              Âm thanh
+            </span>
+            <SoundToggle />
+          </div>
         </div>
         <p className="start__hint">Bạn cầm quân Đỏ · Máy cầm quân Xanh</p>
       </div>

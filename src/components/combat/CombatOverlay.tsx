@@ -20,8 +20,16 @@ interface CombatOverlayProps {
  * fixed timeline, plays the impact FX, then dispatches combatComplete, which
  * is when the controller calls applyMove. Contains no Xiangqi rules. Covers
  * and blocks the game while active.
+ *
+ * During the 'context' phase the board shows the capture (see
+ * CaptureContext); the overlay and its timeline start only after it.
  */
-export function CombatOverlay({ combat, dispatch }: CombatOverlayProps) {
+export function CombatOverlay(props: CombatOverlayProps) {
+  if (props.combat.phase === 'context') return null;
+  return <CombatScene {...props} />;
+}
+
+function CombatScene({ combat, dispatch }: CombatOverlayProps) {
   const [stage, setStage] = useState<CombatStage>('open');
   const reducedMotion = useReducedMotion();
   const { id, attacker, defender } = combat;

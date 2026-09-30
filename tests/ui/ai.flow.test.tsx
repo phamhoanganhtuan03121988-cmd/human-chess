@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CAPTURE_CONTEXT } from '../../src/components/combat/combatTimeline.ts';
 import { App } from '../../src/App.tsx';
 import { CombatOverlay } from '../../src/components/combat/CombatOverlay.tsx';
 import { GameBoard } from '../../src/components/GameBoard.tsx';
@@ -49,6 +50,8 @@ const advance = (ms: number) => {
   for (let t = 0; t < ms; t += 50) act(() => void vi.advanceTimersByTime(Math.min(50, ms - t)));
 };
 const overlay = () => screen.queryByTestId('combat-overlay');
+/** A capture in progress: board context first, then the combat overlay. */
+const inCombat = () => screen.queryByTestId('capture-context') !== null || overlay() !== null;
 const locked = () => document.querySelector('.board-frame--locked') !== null;
 /** Red pawn forward, including its 240 ms movement animation. */
 const humanPawnMove = () => {
@@ -80,7 +83,7 @@ describe('AI game flow (UI)', () => {
     advance(AI_THINK_DELAY_MS - 150);
     expect(status()).toBe('XANH ĐANG NGHĨ...'); // still presenting the delay
     advance(200);
-    if (overlay()) advance(1600); // an AI capture plays the combat first…
+    if (inCombat()) advance(CAPTURE_CONTEXT.end + 1600); // an AI capture plays context + combat first…
     else advance(300); // …a normal AI move animates first
     expect(status()).toBe('LƯỢT ĐỎ');
     expect(locked()).toBe(false);
@@ -118,6 +121,13 @@ describe('AI game flow (UI)', () => {
     );
     expect(status()).toBe('XANH ĐANG NGHĨ...');
     advance(AI_THINK_DELAY_MS + 50);
+    // Same board context as a human capture: attacker, defender and trajectory.
+    expect(overlay()).toBeNull();
+    expect(screen.getByTestId('capture-context').dataset.from).toBe('0,2');
+    expect(screen.getByTestId('capture-context').dataset.to).toBe('0,6');
+    expect(document.querySelector('[data-testid="piece"].is-attacking')!.getAttribute('data-side')).toBe('blue');
+    expect(document.querySelector('[data-testid="piece"].is-targeted')!.getAttribute('data-side')).toBe('red');
+    advance(CAPTURE_CONTEXT.end);
     expect(overlay()).not.toBeNull();
     const src = (id: string) => new URL((screen.getByTestId(id) as HTMLImageElement).src).pathname;
     expect(src('combat-attacker-portrait')).toBe('/assets/portraits/blue/rook.png');
@@ -190,7 +200,7 @@ describe('AI game flow (UI)', () => {
       />,
     );
     advance(AI_THINK_DELAY_MS + 50);
-    if (overlay()) advance(1600);
+    if (inCombat()) advance(CAPTURE_CONTEXT.end + 1600);
     else advance(300); // mating move animates before it is applied
     expect(status()).toMatch(/— XANH THẮNG$/);
     advance(5000);

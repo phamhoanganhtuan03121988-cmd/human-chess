@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CAPTURE_CONTEXT, CAPTURE_CONTEXT_REDUCED_MS } from '../../src/components/combat/combatTimeline.ts';
 import { App } from '../../src/App.tsx';
 import { setAudioBackend } from '../../src/audio/index.ts';
 import type { AudioBackend } from '../../src/audio/index.ts';
@@ -65,6 +66,7 @@ function captureWith(diagram: string, turn: Side, from: [number, number], to: [n
   render(<Harness game={position(diagram, turn)} />);
   fireEvent.click(img(...from)!);
   fireEvent.click(img(...to)!);
+  advance(CAPTURE_CONTEXT.end); // board capture context, then the overlay
 }
 
 describe('combat impact: human Red Cannon captures Blue Knight', () => {
@@ -72,6 +74,8 @@ describe('combat impact: human Red Cannon captures Blue Knight', () => {
     render(<App initialScreen="game" />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
+    expect(overlay()).toBeNull(); // board context first
+    advance(CAPTURE_CONTEXT.end);
 
     expect(overlay()).not.toBeNull(); // 0 ms
     expect(overlay()!.dataset.stage).toBe('open');
@@ -149,7 +153,9 @@ describe('combat impact: AI Blue captures Red with the same system', () => {
         )}
       />,
     );
-    advance(750); // AI thinks, then captures
+    advance(750); // AI thinks, then captures: the same board context first
+    expect(screen.getByTestId('capture-context').dataset.from).toBe('0,2');
+    advance(CAPTURE_CONTEXT.end);
     expect(overlay()).not.toBeNull();
     advance(1000);
     const fx = impact()!;
@@ -250,6 +256,8 @@ describe('reduced motion', () => {
     render(<App initialScreen="game" />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
+    expect(screen.getByTestId('capture-context').className).toContain('is-reduced');
+    advance(CAPTURE_CONTEXT_REDUCED_MS);
     expect(overlay()!.className).toContain('combat-overlay--reduced');
     expect(overlay()!.dataset.reducedMotion).toBe('true');
     advance(1000);

@@ -63,6 +63,8 @@ export function PieceToken({
   landing,
   actionable,
   alert,
+  attacking,
+  targeted,
 }: PieceTokenProps) {
   const { name, glyph } = getPieceDisplayName(side, type);
   const size = `max(${boardUnits(TOKEN_SIZE)}, ${TOKEN_MIN_PX}px)`;
@@ -74,6 +76,8 @@ export function PieceToken({
     capturable && 'is-capturable',
     actionable && 'is-actionable',
     alert && 'is-alert',
+    attacking && 'is-attacking',
+    targeted && 'is-targeted',
     motion && 'is-moving',
     landing && !motion && 'is-landing',
     debug && 'piece-token--debug',
@@ -82,7 +86,7 @@ export function PieceToken({
     <BoardAnchor
       x={x}
       y={y}
-      zIndex={hovered || selected || motion ? RAISED_PIECE_Z_INDEX : getPieceZIndex(y)}
+      zIndex={hovered || selected || motion || attacking ? RAISED_PIECE_Z_INDEX : getPieceZIndex(y)}
       className="piece"
     >
       <button

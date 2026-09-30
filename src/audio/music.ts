@@ -1,9 +1,17 @@
 /**
- * Ambience: an extremely quiet, dark "room tone" (filtered brown noise with a
- * very slow swell). No music. Starts only after audio is unlocked and sound
- * is on; stops when muted.
+ * Background layers under the sound effects:
+ *
+ * - Ambience: an extremely quiet, dark "room tone" (filtered brown noise with
+ *   a very slow swell). Starts only after audio is unlocked and sound is on.
+ * - Music: a real looping track (MUSIC_TRACK_URL), streamed by one media
+ *   element routed through the shared AudioContext's master bus, so the
+ *   master mute/volume apply to it as well. It starts only when the player
+ *   starts a game (a user gesture), follows its own on/off and volume
+ *   settings, pauses while the page is hidden, and is disabled for the rest
+ *   of the session if the file is missing or unplayable.
  */
-import { VOLUME } from './volume.ts';
+import { getAudio, unlockAudio } from './audioContext.ts';
+import { VOLUME, getMusicVolume, getVolume, isMusicEnabled, isMuted } from './volume.ts';
 
 interface Ambience {
   src: AudioBufferSourceNode;
@@ -72,4 +80,145 @@ export function stopAmbience(ctx: AudioContext | null): void {
 
 export function isAmbienceRunning(): boolean {
   return current !== null;
+}
+
+// ---- Background music --------------------------------------------------
+
+/**
+ * Expected location of the soundtrack (public/assets/audio/). Instrumental,
+ * restrained wuxia / guzheng-style loop of ~2–4 minutes. Until the file is
+ * supplied the music layer reports 'unavailable' and stays silent.
+ */
+export const MUSIC_TRACK_URL = '/assets/audio/xiangqi-theme.mp3';
+
+export type MusicStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'unavailable';
+
+interface MusicPlayer {
+  readonly el: HTMLAudioElement;
+  /** Gain inside the shared AudioContext (null if the element could not be routed). */
+  readonly gain: GainNode | null;
+}
+
+let player: MusicPlayer | null = null;
+let musicStatus: MusicStatus = 'idle';
+/** The player asked for music (started a game); music never starts on its own. */
+let wanted = false;
+const statusListeners = new Set<() => void>();
+let createElement: () => HTMLAudioElement = () => new Audio();
+
+function setStatus(next: MusicStatus): void {
+  if (next === musicStatus) return;
+  musicStatus = next;
+  statusListeners.forEach((l) => l());
+}
+
+export function getMusicStatus(): MusicStatus {
+  return musicStatus;
+}
+
+export function subscribeMusicStatus(listener: () => void): () => void {
+  statusListeners.add(listener);
+  return () => statusListeners.delete(listener);
+}
+
+function markUnavailable(): void {
+  if (player) {
+    try {
+      player.el.pause();
+      player.el.removeAttribute('src');
+      player.gain?.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }
+  player = null;
+  setStatus('unavailable');
+}
+
+/** Creates the single music player (needs the unlocked AudioContext). */
+function ensurePlayer(): MusicPlayer | null {
+  if (musicStatus === 'unavailable') return null;
+  if (player) return player;
+  const audio = getAudio();
+  if (!audio) return null;
+  const el = createElement();
+  el.loop = true;
+  el.preload = 'auto';
+  el.addEventListener('error', markUnavailable);
+  el.addEventListener('playing', () => setStatus('playing'));
+  el.addEventListener('pause', () => {
+    if (musicStatus !== 'unavailable') setStatus('paused');
+  });
+  let gain: GainNode | null = null;
+  try {
+    const source = audio.ctx.createMediaElementSource(el);
+    gain = audio.ctx.createGain();
+    gain.gain.value = 0;
+    source.connect(gain).connect(audio.master);
+  } catch {
+    gain = null; // fall back to the element's own volume
+  }
+  el.src = MUSIC_TRACK_URL;
+  player = { el, gain };
+  setStatus('loading');
+  return player;
+}
+
+function shouldPlay(): boolean {
+  const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+  return wanted && isMusicEnabled() && !isMuted() && getVolume() > 0 && getMusicVolume() > 0 && !hidden;
+}
+
+/** Brings the music in line with the settings; safe to call any time. */
+export function applyMusic(): void {
+  if (!shouldPlay()) {
+    if (player && !player.el.paused) player.el.pause();
+    return;
+  }
+  const p = ensurePlayer();
+  if (!p) return;
+  const level = VOLUME.music * getMusicVolume();
+  const audio = getAudio();
+  if (p.gain && audio) {
+    const t = audio.ctx.currentTime;
+    p.gain.gain.cancelScheduledValues(t);
+    p.gain.gain.setTargetAtTime(level, t, 0.4); // gentle fade in / level change
+  } else {
+    p.el.volume = Math.min(1, level * getVolume());
+  }
+  if (p.el.paused) {
+    const started = p.el.play();
+    if (started && typeof started.catch === 'function') {
+      started.catch((err: unknown) => {
+        // Autoplay refusal: wait for the next gesture. Anything else: no usable track.
+        if (err instanceof Error && err.name === 'NotAllowedError') setStatus('paused');
+        else if (!(err instanceof Error && err.name === 'AbortError')) markUnavailable();
+      });
+    }
+  }
+}
+
+/** Call from a user gesture (e.g. "CHƠI NGAY"): allows the music to start. */
+export function requestMusic(): void {
+  wanted = true;
+  unlockAudio();
+  applyMusic();
+}
+
+/** Test helpers. */
+export function setMusicElementFactory(factory: (() => HTMLAudioElement) | null): void {
+  createElement = factory ?? (() => new Audio());
+}
+export function resetMusicForTests(): void {
+  if (player) {
+    try {
+      player.el.pause();
+    } catch {
+      /* ignore */
+    }
+  }
+  player = null;
+  wanted = false;
+  musicStatus = 'idle';
+  statusListeners.clear();
 }

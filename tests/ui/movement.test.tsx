@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CAPTURE_CONTEXT } from '../../src/components/combat/combatTimeline.ts';
 import { App } from '../../src/App.tsx';
 import { CombatOverlay } from '../../src/components/combat/CombatOverlay.tsx';
 import { GameBoard } from '../../src/components/GameBoard.tsx';
@@ -171,6 +172,8 @@ describe('movement animation (UI)', () => {
       />,
     );
     advance(AI_THINK_DELAY_MS + 40);
+    expect(screen.getByTestId('capture-context')).toBeTruthy(); // board context first
+    advance(CAPTURE_CONTEXT.end);
     expect(screen.getByTestId('combat-overlay')).toBeTruthy();
     expect(moving()).toHaveLength(0);
     advance(1700);

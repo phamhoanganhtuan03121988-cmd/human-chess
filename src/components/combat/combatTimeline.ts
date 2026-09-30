@@ -31,3 +31,20 @@ const ORDER: readonly CombatStage[] = ['open', 'attacker', 'defender', 'vs', 'ac
 export function reached(stage: CombatStage, target: CombatStage): boolean {
   return ORDER.indexOf(stage) >= ORDER.indexOf(target);
 }
+
+/**
+ * Capture context shown on the board before the combat overlay (ms):
+ * attacker/defender highlight → trajectory → label, then the overlay opens.
+ */
+export const CAPTURE_CONTEXT = {
+  /** Phase A: attacker and defender highlighted, other pieces dimmed. */
+  highlight: 0,
+  /** Phase B: the trajectory draws from attacker to defender. */
+  trajectory: 300,
+  /** Phase C: "MÃ ĐỎ ⚔ TỐT XANH" label + impact marker on the defender. */
+  label: 600,
+  /** Hand-off to the combat overlay. */
+  end: 950,
+} as const;
+/** Reduced motion: same information, shown at once and shorter. */
+export const CAPTURE_CONTEXT_REDUCED_MS = 500;

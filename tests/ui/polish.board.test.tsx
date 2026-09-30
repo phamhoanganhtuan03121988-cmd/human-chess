@@ -79,7 +79,7 @@ describe('10.2 selection polish', () => {
     expectCentered(reticles[0]!, 1, 0);
     // The reticle is visual only: clicking the enemy piece still captures.
     fireEvent.click(img(1, 0)!);
-    expect(screen.getByTestId('combat-overlay')).toBeTruthy();
+    expect(screen.getByTestId('capture-context')).toBeTruthy(); // the capture starts (board context first)
   });
 
   it('hovering a capture target emphasises its reticle', () => {

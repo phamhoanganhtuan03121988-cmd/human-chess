@@ -1079,8 +1079,7 @@ img { -webkit-user-drag: none; }
 /* Buttons ---------------------------------------------------------------- */
 .btn,
 .toolbar__button,
-.game-over__button,
-.segmented__item {
+.game-over__button {
   transition: background-color 140ms ease, filter 140ms ease, transform 90ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 .btn:not(:disabled):hover,
@@ -1088,8 +1087,7 @@ img { -webkit-user-drag: none; }
 .game-over__button:hover { filter: brightness(1.15); }
 .btn:not(:disabled):active,
 .toolbar__button:not(:disabled):active,
-.game-over__button:active,
-.segmented__item:not(:disabled):active { transform: scale(0.96); }
+.game-over__button:active { transform: scale(0.96); }
 
 .btn {
   font: inherit;
@@ -1226,29 +1224,6 @@ img { -webkit-user-drag: none; }
 }
 
 /* Segmented control / select / slider ------------------------------------ */
-.segmented {
-  display: inline-flex;
-  padding: 3px;
-  gap: 3px;
-  border-radius: 999px;
-  border: 1px solid var(--gold-lo);
-  background: rgba(0, 0, 0, 0.3);
-}
-.segmented__item {
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  min-height: 34px;
-  padding: 4px 14px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: rgba(245, 240, 230, 0.75);
-  cursor: pointer;
-}
-.segmented__item:not(.is-active):hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
-.segmented__item.is-active { color: #2a1a0c; background: linear-gradient(180deg, #f6e3a1, #c9a24a); }
 
 .difficulty-select {
   font: inherit;
@@ -1405,7 +1380,6 @@ img { -webkit-user-drag: none; }
   .toolbar { min-height: 44px; }
   .toolbar__button { min-height: 40px; min-width: 42px; padding: 3px 12px; }
   .difficulty-select { min-height: 40px; }
-  .segmented__item { min-height: 40px; }
   .game-over__button { min-height: 36px; min-width: 64px; }
   .hud__menu .toolbar__button { min-height: 44px; }
   .volume-slider { height: 32px; }
@@ -1417,8 +1391,8 @@ img { -webkit-user-drag: none; }
 @media (prefers-reduced-motion: reduce) {
   .modal-backdrop, .modal, .start-screen .modal, .hud__menu, .side-panel, .captures__token { animation: none; }
   .start-screen, .start-screen .modal { transition: none; }
-  .btn, .toolbar__button, .game-over__button, .segmented__item { transition: none; }
-  .btn:active, .toolbar__button:active, .game-over__button:active, .segmented__item:active { transform: none; }
+  .btn, .toolbar__button, .game-over__button { transition: none; }
+  .btn:active, .toolbar__button:active, .game-over__button:active { transform: none; }
 }
 .hud__menu .toolbar__button { justify-content: flex-start; padding-left: 14px; }
 .hud__text { font-size: 13px; }
@@ -1698,3 +1672,177 @@ img { -webkit-user-drag: none; }
   .toolbar--replay { flex-wrap: wrap; justify-content: center; row-gap: 6px; max-width: calc(100vw - 32px); }
   .toolbar--replay .replay__title { flex: 1 1 100%; text-align: center; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Step 14 — capture context: before the combat overlay the board     */
+/* shows WHO attacks WHOM and WHERE.                                   */
+/* ------------------------------------------------------------------ */
+/* Phase A: unrelated pieces dim slightly; the board itself stays clear. */
+.board-frame--context .piece-token:not(.is-attacking):not(.is-targeted) {
+  filter: brightness(0.72) saturate(0.55);
+  transition: filter 200ms ease;
+}
+.piece-token.is-attacking {
+  transform: translateY(max(-0.35cqw, -4px));
+  box-shadow:
+    0 0 0 max(0.16cqw, 1.5px) #fff1c4,
+    0 0 0 max(0.4cqw, 3.5px) #d9a33a,
+    0 0 max(1.6cqw, 12px) max(0.3cqw, 3px) rgba(246, 200, 100, 0.75),
+    0 max(0.55cqw, 5px) 0 rgba(35, 20, 8, 0.6),
+    0 max(0.9cqw, 7px) max(0.9cqw, 7px) rgba(30, 18, 6, 0.4);
+  animation: ctx-attacker-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.piece-token.is-targeted {
+  box-shadow:
+    0 0 0 max(0.14cqw, 1.5px) #ffd9d0,
+    0 0 0 max(0.4cqw, 3.5px) var(--crimson),
+    0 0 max(1.4cqw, 10px) max(0.3cqw, 2px) rgba(220, 50, 35, 0.7),
+    0 max(0.28cqw, 2px) 0 rgba(35, 20, 8, 0.75);
+  animation: ctx-target-pulse 520ms ease-in-out 2;
+}
+@keyframes ctx-attacker-in {
+  from { transform: none; }
+}
+@keyframes ctx-target-pulse {
+  50% { transform: scale(1.07); }
+}
+/* During the replay's short capture the target keeps its crimson ring while the attacker slides in. */
+.piece-token.is-targeted:not(.board-frame--context *) { animation: none; }
+
+.board__layer--context { z-index: 5; pointer-events: none; }
+.capture-context__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* Phase B: the trajectory draws from the attacker to the defender. */
+.capture-context__trail {
+  stroke-width: 0.085;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 0.06px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 0.12px rgba(246, 210, 120, 0.8));
+  animation: ctx-draw var(--ctx-draw) cubic-bezier(0.5, 0, 0.25, 1) var(--ctx-trajectory) forwards;
+}
+.capture-context__streak {
+  stroke: #fff6da;
+  stroke-width: 0.05;
+  stroke-linecap: round;
+  stroke-dasharray: 0.18 1;
+  stroke-dashoffset: 0.18;
+  opacity: 0;
+  animation: ctx-streak var(--ctx-draw) ease-in var(--ctx-trajectory) forwards;
+}
+/* Phase C: impact marker on the defender + the label. */
+.capture-context__impact {
+  fill: none;
+  stroke: #e0463a;
+  stroke-width: 0.06;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ctx-impact 420ms ease-out var(--ctx-label) forwards;
+}
+.capture-context__label {
+  position: absolute;
+  left: 50%;
+  top: 50%; /* centre of the river band: no intersections here */
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
+  padding: max(0.5cqw, 3px) max(1.6cqw, 9px);
+  border-radius: 999px;
+  border: 1px solid var(--gold);
+  background: linear-gradient(180deg, rgba(40, 29, 19, 0.94), rgba(22, 16, 11, 0.94));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0.6cqw 1.6cqw rgba(0, 0, 0, 0.45);
+  font-size: max(2.3cqw, 11px);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.92);
+  animation: ctx-label 220ms ease-out var(--ctx-label) forwards;
+}
+.capture-context__piece--red { color: #ff8a80; }
+.capture-context__piece--blue { color: #9cc0ff; }
+.capture-context__sword { color: var(--gold-hi); font-size: 1.15em; }
+@keyframes ctx-draw { to { stroke-dashoffset: 0; } }
+@keyframes ctx-streak {
+  0% { opacity: 1; stroke-dashoffset: 0.18; }
+  100% { opacity: 1; stroke-dashoffset: -0.82; }
+}
+@keyframes ctx-impact {
+  0% { opacity: 0.95; transform: scale(0.4); }
+  100% { opacity: 0.35; transform: scale(1); }
+}
+@keyframes ctx-label { to { opacity: 1; transform: translate(-50%, -50%); } }
+/* Reduced motion: everything is shown at once, nothing moves. */
+.board__layer--context.is-reduced .capture-context__trail { animation: none; stroke-dashoffset: 0; }
+.board__layer--context.is-reduced .capture-context__streak { display: none; }
+.board__layer--context.is-reduced .capture-context__impact { animation: none; opacity: 0.6; }
+.board__layer--context.is-reduced .capture-context__label { animation: none; opacity: 1; transform: translate(-50%, -50%); }
+@media (prefers-reduced-motion: reduce) {
+  .piece-token.is-attacking, .piece-token.is-targeted { animation: none; }
+  .piece-token.is-attacking { transform: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 14 — compact start screen: title, CTA, then a small settings   */
+/* plaque (difficulty dropdown + sound) instead of a wide segmented bar. */
+/* ------------------------------------------------------------------ */
+.start { gap: 10px; }
+.start__subtitle { margin: -2px 0 6px; }
+.start .btn--large { margin-top: 2px; }
+.start__settings {
+  display: grid;
+  width: min(280px, 100%);
+  margin-top: 6px;
+  padding: 2px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 162, 74, 0.45);
+  background: linear-gradient(180deg, rgba(40, 29, 19, 0.7), rgba(22, 16, 11, 0.7));
+  box-shadow: inset 0 1px 0 rgba(246, 227, 161, 0.08);
+}
+.start__settings .start__row {
+  justify-content: space-between;
+  min-height: 50px;
+  gap: 16px;
+  cursor: default;
+}
+.start__settings .start__row + .start__row { border-top: 1px solid rgba(201, 162, 74, 0.22); }
+.start__settings .start__label { min-width: 0; text-align: left; font-size: 11.5px; letter-spacing: 0.2em; text-transform: uppercase; }
+.start__settings .sound-toggle { min-height: 40px; min-width: 52px; font-size: 16px; }
+/* Dropdown styled as part of the game, not a browser form control. */
+.start__settings .difficulty-select,
+.difficulty-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23f6e3a1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 11px 8px;
+  background-color: #2b221a;
+}
+.start__settings .difficulty-select {
+  min-height: 40px;
+  min-width: 150px;
+  padding-left: 14px;
+  border-radius: 999px;
+  border-color: var(--gold);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold-hi);
+  cursor: pointer;
+}
+.start__settings .difficulty-select:hover { border-color: var(--gold-hi); }
+.start__hint { margin: 2px 0 0; }
+@media (max-height: 460px) {
+  .start { gap: 6px; }
+  .start__settings .start__row { min-height: 44px; }
+}
+
+/* Background music control: ♪ toggle + its own small slider. */
+.music-control { display: inline-flex; align-items: center; gap: 6px; }
+.music-toggle { font-size: 15px; }
+.music-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
+.volume-slider--music { width: 64px; }
+.volume-slider:disabled { opacity: 0.35; cursor: not-allowed; }
+.hud__menu .music-control { flex: 1; justify-content: flex-end; }
+.hud__menu .volume-slider--music { width: 96px; }

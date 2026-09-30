@@ -28,8 +28,11 @@ import type { Difficulty } from '../ai/difficulty.ts';
  * Combat presentation for a capture (UI only, not part of the engine).
  * While a combat is active the engine GameState is untouched; the capture is
  * applied with applyMove only when the combat completes.
+ *
+ * Phases: 'context' (the board shows who attacks whom and where), then the
+ * combat overlay's own 'entering' → 'impact' → 'complete'.
  */
-export type CombatPhase = 'idle' | 'entering' | 'impact' | 'complete';
+export type CombatPhase = 'idle' | 'context' | 'entering' | 'impact' | 'complete';
 
 export interface CombatState {
   /** Increments per combat, so the presentation can key its timeline. */
@@ -89,7 +92,7 @@ export type UiAction =
   | { readonly type: 'click'; readonly position: Position }
   | { readonly type: 'clearSelection' }
   | { readonly type: 'newGame' }
-  | { readonly type: 'combatPhase'; readonly id: number; readonly phase: 'impact' | 'complete' }
+  | { readonly type: 'combatPhase'; readonly id: number; readonly phase: 'entering' | 'impact' | 'complete' }
   | { readonly type: 'combatComplete'; readonly id: number }
   /** The movement animation with this id reached its destination. */
   | { readonly type: 'movementComplete'; readonly id: number }
@@ -212,8 +215,9 @@ function playMove(state: UiState, move: Move): UiState {
     return { ...state, selected: null, legalMoves: [], movement };
   }
   if (defender) {
-    // Capture: present the combat first; the engine applies it on completion.
-    const combat: CombatState = { id: nextCombatId++, phase: 'entering', attacker, defender, move };
+    // Capture: show the capture on the board (context), then the combat; the
+    // engine applies it on completion.
+    const combat: CombatState = { id: nextCombatId++, phase: 'context', attacker, defender, move };
     return { ...state, selected: null, legalMoves: [], combat };
   }
   // Normal move: animate first; the engine applies it on completion.
@@ -269,6 +273,8 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return handleAiMove(state, action);
     case 'combatPhase':
       if (!state.combat || state.combat.id !== action.id) return state;
+      // The overlay starts only from the board context (stale / repeated requests are ignored).
+      if (action.phase === 'entering' && state.combat.phase !== 'context') return state;
       return { ...state, combat: { ...state.combat, phase: action.phase } };
     case 'combatComplete':
       // Only now does the capture reach the engine. Stale or repeated completions are ignored.

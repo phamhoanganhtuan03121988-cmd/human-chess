@@ -21,6 +21,8 @@ interface PieceLayerProps {
   actingSide?: 'red' | 'blue' | null;
   /** General currently in check. */
   alertAt?: Position | null;
+  /** Capture being presented: attacker at `from`, defender at `to`. */
+  captureContext?: { from: Position; to: Position } | null;
   /** Show sprite outlines and anchor points (debug mode). */
   debug?: boolean;
 }
@@ -45,6 +47,7 @@ export function PieceLayer({
   landedAt = null,
   actingSide = null,
   alertAt = null,
+  captureContext = null,
   debug = false,
 }: PieceLayerProps) {
   const interaction = (p: PiecePlacement) => ({
@@ -57,6 +60,8 @@ export function PieceLayer({
     landing: eq(landedAt, p),
     actionable: actingSide !== null && (p.side === actingSide || at(captureTargets, p)),
     alert: eq(alertAt, p),
+    attacking: captureContext !== null && eq(captureContext.from, p),
+    targeted: captureContext !== null && eq(captureContext.to, p),
   });
   const key = (p: PiecePlacement) => `${p.side}-${p.type}-${p.x},${p.y}`;
 

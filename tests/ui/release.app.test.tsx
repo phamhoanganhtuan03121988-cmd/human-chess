@@ -75,7 +75,12 @@ describe('start screen', () => {
     const start = screen.getByTestId('start-screen');
     expect(within(start).getByRole('heading', { name: 'CỜ TƯỚNG' })).toBeTruthy();
     expect(start.textContent).toContain('CINEMATIC XIANGQI');
-    expect(within(start).getByTestId('difficulty-segmented')).toBeTruthy();
+    // Compact dropdown (not a wide segmented control) with all three levels.
+    const select = within(start).getByTestId('difficulty-select') as HTMLSelectElement;
+    expect(select.tagName).toBe('SELECT');
+    expect([...select.options].map((o) => o.textContent)).toEqual(['DỄ', 'BÌNH THƯỜNG', 'KHÓ']);
+    expect(select.value).toBe('normal');
+    expect(within(start).queryByRole('radiogroup')).toBeNull();
     expect(within(start).getByTestId('sound-toggle')).toBeTruthy();
     expect(document.activeElement?.textContent).toBe('CHƠI NGAY');
     expect(main().hasAttribute('inert')).toBe(true);
@@ -84,8 +89,9 @@ describe('start screen', () => {
 
   it('difficulty chosen on the start screen persists and reaches the HUD', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('radio', { name: 'KHÓ' }));
-    expect(screen.getByRole('radio', { name: 'KHÓ' }).getAttribute('aria-checked')).toBe('true');
+    const select = within(screen.getByTestId('start-screen')).getByLabelText('Độ khó') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'hard' } });
+    expect(select.value).toBe('hard');
     expect(localStorage.getItem(DIFFICULTY_KEY)).toBe('hard');
     enterGame();
     expect((screen.getAllByTestId('difficulty-select')[0] as HTMLSelectElement).value).toBe('hard');
@@ -106,7 +112,7 @@ describe('start screen', () => {
   it('remembers the difficulty across reloads', () => {
     localStorage.setItem(DIFFICULTY_KEY, 'easy');
     render(<App />);
-    expect(screen.getByRole('radio', { name: 'DỄ' }).getAttribute('aria-checked')).toBe('true');
+    expect((within(screen.getByTestId('start-screen')).getByTestId('difficulty-select') as HTMLSelectElement).value).toBe('easy');
   });
 });
 

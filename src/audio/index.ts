@@ -10,16 +10,21 @@
  */
 import type { PieceType, Side } from '../engine/index.ts';
 import { getAudio, installAudioUnlock, onAudioUnlocked, setMasterLevel, unlockAudio } from './audioContext.ts';
-import { startAmbience, stopAmbience } from './music.ts';
+import { applyMusic, startAmbience, stopAmbience } from './music.ts';
 import * as S from './sounds.ts';
 import type { CombatCue, GameResult } from './sounds.ts';
-import { VOLUME, getVolume, isMuted, setMuted, subscribeMute, subscribeVolume, toggleMuted } from './volume.ts';
+import { VOLUME, getVolume, isMuted, setMuted, subscribeMusicSettings, subscribeMute, subscribeVolume, toggleMuted } from './volume.ts';
 
 export type { CombatCue, GameResult } from './sounds.ts';
 export {
   VOLUME,
+  getMusicVolume,
   getVolume,
+  isMusicEnabled,
   isMuted,
+  setMusicEnabled,
+  setMusicVolume,
+  subscribeMusicSettings,
   setMuted,
   setVolume,
   subscribeMute,
@@ -27,6 +32,8 @@ export {
   toggleMuted,
 } from './volume.ts';
 export { installAudioUnlock, isAudioUnlocked, unlockAudio } from './audioContext.ts';
+export { MUSIC_TRACK_URL, getMusicStatus, requestMusic, subscribeMusicStatus } from './music.ts';
+export type { MusicStatus } from './music.ts';
 
 export type SoundName =
   | 'select'
@@ -105,7 +112,7 @@ export const playGameOverSound = (result: GameResult) => play('gameOver', { resu
 export const playTurnSound = (side: Side, role: 'human' | 'ai' = 'human') => play('turn', { side, role });
 export const playNewGameSound = () => play('newGame');
 
-// Mute controls the master level and the ambience.
+// Mute controls the master level, the ambience and the music.
 let wired = false;
 /** Connects mute state to the master bus and ambience; idempotent. */
 export function initAudio(): () => void {
@@ -119,10 +126,14 @@ export function initAudio(): () => void {
     setMasterLevel(muted ? 0 : getVolume());
     if (muted) stopAmbience(a.ctx);
     else startAmbience(a.ctx, a.master);
+    applyMusic();
   };
   onAudioUnlocked(apply);
   subscribeMute(apply);
   subscribeVolume(apply);
+  subscribeMusicSettings(applyMusic);
+  // Music pauses while the page is hidden (phone locked / app switched) and resumes after.
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', applyMusic);
   return removeUnlock;
 }
 

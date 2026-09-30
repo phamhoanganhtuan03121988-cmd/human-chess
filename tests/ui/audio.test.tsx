@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { StrictMode, useReducer } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CAPTURE_CONTEXT } from '../../src/components/combat/combatTimeline.ts';
 import { App } from '../../src/App.tsx';
 import * as audio from '../../src/audio/index.ts';
 import type { AudioBackend } from '../../src/audio/index.ts';
@@ -346,7 +347,7 @@ describe('game sounds fire on transitions only', () => {
     fireEvent.click(img(4, 6)!);
     fireEvent.click(marker(4, 5));
     advance(300 + AI_THINK_DELAY_MS + 40);
-    advance(2000); // AI reply (possibly a combat) finishes
+    advance(CAPTURE_CONTEXT.end + 2000); // AI reply (possibly context + combat) finishes
     calls = [];
     fireEvent.click(screen.getByTestId('new-game'));
     expect(calls).toEqual([]); // mid-game: asks for confirmation first

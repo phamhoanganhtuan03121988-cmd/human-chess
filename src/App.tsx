@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Difficulty } from './ai/difficulty.ts';
-import { initAudio, toggleSound } from './audio/index.ts';
+import { initAudio, requestMusic, toggleSound } from './audio/index.ts';
 import { CharacterActionCard } from './components/CharacterActionCard.tsx';
 import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { ConfirmNewGameDialog } from './components/ConfirmDialog.tsx';
@@ -80,6 +80,8 @@ export function App({ initialScreen = 'start' }: AppProps) {
   }, []);
 
   const enterGame = () => {
+    // "CHƠI NGAY" / "TIẾP TỤC" is the user gesture that lets the background music start.
+    requestMusic();
     setLeaving(true);
     window.setTimeout(() => {
       setScreen('game');

@@ -43,6 +43,8 @@ interface BoardProps {
   waiting?: boolean;
   /** The game has ended (board dims slightly behind the result banner). */
   over?: boolean;
+  /** A capture is being shown on the board (unrelated pieces dim slightly). */
+  captureContext?: boolean;
 }
 
 /**
@@ -61,6 +63,7 @@ export function Board({
   turn = null,
   waiting = false,
   over = false,
+  captureContext = false,
 }: BoardProps) {
   const frameHeight = BOARD_HEIGHT + headroom;
   const frameStyle = {
@@ -76,6 +79,7 @@ export function Board({
     turn && `board-frame--turn-${turn}`,
     waiting && 'board-frame--waiting',
     over && 'board-frame--over',
+    captureContext && 'board-frame--context',
   ];
 
   return (

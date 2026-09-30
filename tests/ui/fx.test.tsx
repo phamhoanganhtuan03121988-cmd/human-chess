@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CAPTURE_CONTEXT, CAPTURE_CONTEXT_REDUCED_MS } from '../../src/components/combat/combatTimeline.ts';
 import { getIntersectionPosition } from '../../src/board/layout.ts';
 import { CombatOverlay } from '../../src/components/combat/CombatOverlay.tsx';
 import { GameBoard } from '../../src/components/GameBoard.tsx';
@@ -71,6 +72,7 @@ describe('move landing pulse', () => {
     render(<Harness />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
+    advance(CAPTURE_CONTEXT.end);
     advance(1620);
     expectCentered(screen.getByTestId('landing-pulse'), 1, 0);
   });
@@ -96,6 +98,7 @@ describe('capture impact', () => {
     render(<Harness />);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
+    advance(CAPTURE_CONTEXT.end);
     advance(980);
     expect(screen.queryByTestId('combat-vignette')).toBeNull();
     advance(40);
@@ -203,6 +206,7 @@ describe('reduced motion', () => {
     advance(60);
     fireEvent.click(img(1, 7)!);
     fireEvent.click(img(1, 0)!);
+    advance(CAPTURE_CONTEXT_REDUCED_MS);
     expect(screen.getByTestId('combat-overlay').className).toContain('combat-overlay--reduced');
     advance(1020);
     expect(screen.getByTestId('board-frame').className).not.toContain('board-frame--impact');

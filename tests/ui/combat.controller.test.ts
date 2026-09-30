@@ -14,7 +14,7 @@ describe('combat state (controller)', () => {
     const start = createUiState();
     const s = click(click(start, 1, 7), 1, 0);
     expect(s.combat).not.toBeNull();
-    expect(getCombatPhase(s)).toBe('entering');
+    expect(getCombatPhase(s)).toBe('context'); // the board shows the capture first
     expect(s.combat!.attacker).toEqual({ side: 'red', type: 'cannon' });
     expect(s.combat!.defender).toEqual({ side: 'blue', type: 'knight' });
     expect(s.combat!.move).toEqual({ from: { x: 1, y: 7 }, to: { x: 1, y: 0 } });
@@ -28,6 +28,16 @@ describe('combat state (controller)', () => {
     expect(s.combat).toBeNull();
     expect(getCombatPhase(s)).toBe('idle');
     expect(s.game.turn).toBe('blue');
+  });
+
+  it('context hands off to the overlay once; stale or repeated hand-offs are ignored', () => {
+    const s = capture();
+    const entering = uiReducer(s, { type: 'combatPhase', id: s.combat!.id, phase: 'entering' });
+    expect(getCombatPhase(entering)).toBe('entering');
+    expect(uiReducer(s, { type: 'combatPhase', id: s.combat!.id + 99, phase: 'entering' })).toBe(s);
+    const impact = uiReducer(entering, { type: 'combatPhase', id: s.combat!.id, phase: 'impact' });
+    expect(uiReducer(impact, { type: 'combatPhase', id: s.combat!.id, phase: 'entering' })).toBe(impact);
+    expect(entering.game).toBe(s.game);
   });
 
   it('phases advance without touching the engine state', () => {

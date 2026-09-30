@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { CaptureContext } from './CaptureContext.tsx';
+import { CAPTURE_CONTEXT, CAPTURE_CONTEXT_REDUCED_MS } from './combat/combatTimeline.ts';
 import { playHoverSound } from '../audio/index.ts';
 import { getPortraitAsset } from '../config/assets.ts';
 import { findGeneral, pieceAt } from '../engine/index.ts';
@@ -60,6 +62,13 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
   // Subtle board shake at the combat impact (skipped for reduced motion).
   const shakePx = ui.combat?.phase === 'impact' && !reducedMotion ? getImpactProfile(ui.combat.attacker.type).shakePx : 0;
 
+  // Capture context: the board shows who attacks whom, then hands off to the combat overlay.
+  const context = ui.combat?.phase === 'context' ? ui.combat : null;
+  useCaptureContextDriver(context?.id ?? null, dispatch, reducedMotion);
+  // Replay keeps its short capture; the target is still marked while the attacker slides in.
+  const replayCapture = ui.movement?.capture ? ui.movement.move : null;
+  const contextMove = context?.move ?? replayCapture;
+
   const activity = getActivity(ui);
   const interactive = !isGameOver(game) && !isPresenting(ui) && getAiState(ui) === 'idle';
   const checkedGeneral = game.inCheck ? findGeneral(game.board, game.turn) : null;
@@ -70,6 +79,7 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
     <Board
       turn={activity === 'over' ? null : game.turn}
       over={activity === 'over'}
+      captureContext={context !== null}
       waiting={activity === 'thinking' || activity === 'moving' || activity === 'combat'}
       combat={ui.combat !== null}
       shakePx={shakePx}
@@ -115,14 +125,28 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
         landedAt={lastMove?.to ?? null}
         actingSide={interactive ? game.turn : null}
         alertAt={checkedGeneral}
+        captureContext={contextMove ? { from: contextMove.from, to: contextMove.to } : null}
         debug={debug}
       />
+      {context && <CaptureContext key={context.id} combat={context} reducedMotion={reducedMotion} />}
       <MoveMarkers targets={emptyTargets} captureTargets={captureTargets} hovered={hovered} onSelectTarget={click} />
       {gameOver && showResult && (
         <GameOverBanner view={gameOver} onNewGame={onNewGame ?? (() => dispatch({ type: 'newGame' }))} onReplay={onReplay} />
       )}
     </Board>
   );
+}
+
+/** Ends the board capture context after its fixed duration (then the overlay runs). */
+function useCaptureContextDriver(combatId: number | null, dispatch: (action: UiAction) => void, reducedMotion: boolean) {
+  useEffect(() => {
+    if (combatId === null) return;
+    const ms = reducedMotion ? CAPTURE_CONTEXT_REDUCED_MS : CAPTURE_CONTEXT.end;
+    const t = window.setTimeout(() => dispatch({ type: 'combatPhase', id: combatId, phase: 'entering' }), ms);
+    return () => window.clearTimeout(t);
+    // One timer per combat id; reduced motion is read when it starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [combatId, dispatch]);
 }
 
 /**

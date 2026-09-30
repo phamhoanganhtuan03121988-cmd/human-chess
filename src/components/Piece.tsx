@@ -20,6 +20,9 @@ export interface PieceInteraction {
   actionable?: boolean;
   /** This General is in check. */
   alert?: boolean;
+  /** Capture context: this piece is attacking / being attacked. */
+  attacking?: boolean;
+  targeted?: boolean;
 }
 
 interface PieceProps extends PieceInteraction {

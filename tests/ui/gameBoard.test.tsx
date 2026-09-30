@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useReducer } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CAPTURE_CONTEXT } from '../../src/components/combat/combatTimeline.ts';
 import { PIECE_GLYPHS } from '../../src/config/pieceIdentity.ts';
 import { App } from '../../src/App.tsx';
 import { getIntersectionPosition } from '../../src/board/layout.ts';
@@ -18,7 +19,11 @@ afterEach(() => {
 });
 
 /** Runs the combat presentation to completion (captures apply after it). */
-const finishCombat = () => act(() => void vi.advanceTimersByTime(1600));
+/** Captures: board context, then the combat overlay (stepwise so each stage's timers start). */
+const finishCombat = () => {
+  act(() => void vi.advanceTimersByTime(CAPTURE_CONTEXT.end));
+  act(() => void vi.advanceTimersByTime(1600));
+};
 /** Normal moves animate (240 ms) before the engine applies them. */
 const finishMove = () => act(() => void vi.advanceTimersByTime(300));
 

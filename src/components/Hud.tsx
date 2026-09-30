@@ -6,6 +6,7 @@ import type { Activity, StatusView } from '../game/controller.ts';
 import { SoundToggle } from './SoundToggle.tsx';
 import { StatusPanel } from './StatusPanel.tsx';
 import { DifficultyPicker } from './ui/DifficultyPicker.tsx';
+import { MusicControl } from './ui/MusicControl.tsx';
 import { VolumeSlider } from './ui/VolumeSlider.tsx';
 
 interface HudProps {
@@ -60,6 +61,12 @@ export function Hud(props: HudProps) {
           </span>
           <VolumeSlider id={`volume-${idSuffix}`} />
         </label>
+        <div className="hud__field">
+          <span className="hud__label" aria-hidden="true">
+            {inMenu ? 'Nhạc nền' : ''}
+          </span>
+          <MusicControl id={`music-${idSuffix}`} />
+        </div>
         <button type="button" className="toolbar__button" aria-label="Cách chơi" title="Cách chơi" onClick={props.onHelp}>
           ?{inMenu && <span className="hud__text">Cách chơi</span>}
         </button>
