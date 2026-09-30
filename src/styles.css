@@ -473,7 +473,10 @@ body::after {
   z-index: 100;
   display: grid;
   place-items: center;
-  padding: 12px 16px;
+  /* Clear the notch / home indicator (the page uses viewport-fit=cover). */
+  --pad-l: max(16px, env(safe-area-inset-left, 0px));
+  --pad-r: max(16px, env(safe-area-inset-right, 0px));
+  padding: max(12px, env(safe-area-inset-top, 0px)) var(--pad-r) max(12px, env(safe-area-inset-bottom, 0px)) var(--pad-l);
   overflow: hidden;
   background: rgba(12, 9, 6, 0.6);
   /* The board stays visible behind: darkened, slightly blurred and desaturated. */
@@ -504,9 +507,15 @@ body::after {
  * the two cards share the viewport height; on short landscape screens they
  * sit side by side. --ax/--ay is the attack direction (attacker → defender)
  * and --attack-angle rotates the impact FX to match.
+ *
+ * The card height is also capped by the width: a card is its 9:16 frame plus
+ * the caption beside it (--caption-w, gap included), and it must fit inside
+ * the overlay's padding (--stage-w) so no card ever leaves the viewport.
  */
 .combat-overlay__stage {
-  --card-h: clamp(120px, calc((100dvh - 200px) / 2), 340px);
+  --stage-w: calc(100vw - var(--pad-l) - var(--pad-r));
+  --caption-w: 100px;
+  --card-h: min(clamp(120px, calc((100dvh - 200px) / 2), 340px), calc((var(--stage-w) - var(--caption-w)) * 16 / 9));
   --ax: 0;
   --ay: 1;
   --attack-angle: 90deg;
@@ -515,6 +524,7 @@ body::after {
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
 }
 .combat-overlay--impact .combat-overlay__stage { animation: scene-shake 150ms linear 1; }
 
@@ -768,10 +778,15 @@ body::after {
   75% { transform: translate(calc(var(--shake) * 0.5), 0); }
 }
 
-/* Short landscape screens (e.g. phones): cards side by side, attack runs left → right. */
-@media (max-height: 640px) {
+/*
+ * Short landscape screens (e.g. phones): cards side by side, attack runs
+ * left → right. Only in landscape: a portrait phone whose browser bars leave
+ * ≤ 640px of height keeps the stacked layout (two cards side by side do not
+ * fit its width). The width cap leaves room for both captions and the VS.
+ */
+@media (max-height: 640px) and (orientation: landscape) {
   .combat-overlay__stage {
-    --card-h: clamp(120px, calc(100dvh - 90px), 340px);
+    --card-h: min(clamp(120px, calc(100dvh - 90px), 340px), calc(((var(--stage-w) - 98px) / 2 - var(--caption-w)) * 16 / 9));
     --ax: 1;
     --ay: 0;
     --attack-angle: 0deg;
