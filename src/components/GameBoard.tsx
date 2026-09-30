@@ -6,6 +6,8 @@ import { getPortraitAsset } from '../config/assets.ts';
 import { findGeneral, pieceAt } from '../engine/index.ts';
 import type { Position } from '../engine/index.ts';
 import { TOKEN_HEADROOM } from '../config/pieceSprites.ts';
+import { getBoardPerspective } from '../board/perspective.ts';
+import type { BoardPerspective } from '../board/perspective.ts';
 import type { UiAction, UiState } from '../game/controller.ts';
 import {
   getActivity,
@@ -37,13 +39,16 @@ interface GameBoardProps {
   onReplay?: (() => void) | null;
   /** Hide the result banner (e.g. while a replay reaches the final move). */
   showResult?: boolean;
+  /** Side at the bottom of the screen; defaults to the side this client controls (Red when none). */
+  perspective?: BoardPerspective;
 }
 
 /**
  * The playable board: renders the engine GameState and reports clicks as
  * board positions. All rule decisions happen in the engine via the controller.
  */
-export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = null, showResult = true }: GameBoardProps) {
+export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = null, showResult = true, perspective }: GameBoardProps) {
+  const boardPerspective = perspective ?? getBoardPerspective(ui.controlledSide);
   const [hovered, setHovered] = useState<Position | null>(null);
   const reducedMotion = useReducedMotion();
   useMovementDriver(ui.movement, dispatch, reducedMotion);
@@ -86,6 +91,7 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
       debug={debug}
       headroom={TOKEN_HEADROOM}
       interactive={interactive}
+      perspective={boardPerspective}
       onBackgroundClick={() => dispatch({ type: 'clearSelection' })}
     >
       <GroundLayer
@@ -119,7 +125,7 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
         onClickPiece={click}
         moving={
           ui.movement
-            ? { from: ui.movement.move.from, style: getMovementStyle(ui.movement.move, getMoveDuration(reducedMotion)) }
+            ? { from: ui.movement.move.from, style: getMovementStyle(ui.movement.move, getMoveDuration(reducedMotion), boardPerspective) }
             : null
         }
         landedAt={lastMove?.to ?? null}

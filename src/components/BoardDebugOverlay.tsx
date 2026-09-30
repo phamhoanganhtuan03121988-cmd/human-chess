@@ -8,13 +8,15 @@ import {
   type Side,
 } from '../board/geometry.ts';
 import { getBoardCenter, getBoardPoint } from '../board/layout.ts';
+import { toViewCoordinate } from '../board/perspective.ts';
+import type { BoardPerspective } from '../board/perspective.ts';
 
 /**
  * Development overlay drawn inside the board SVG: all 90 intersections with
  * (x,y) labels, highlighted palace diagonals, river band and board center.
  * Toggle via the `debug` prop on <Board> (see src/config/debug.ts).
  */
-export function BoardDebugOverlay() {
+export function BoardDebugOverlay({ perspective = 'red' }: { perspective?: BoardPerspective }) {
   const riverTopLeft = getBoardPoint(0, RIVER_TOP_Y);
   const riverBottomRight = getBoardPoint(MAX_X, RIVER_BOTTOM_Y);
   const center = getBoardCenter();
@@ -41,7 +43,8 @@ export function BoardDebugOverlay() {
       )}
 
       {getAllIntersections().map(({ x, y }) => {
-        const p = getBoardPoint(x, y);
+        const view = toViewCoordinate(x, y, perspective);
+        const p = getBoardPoint(view.x, view.y);
         return (
           <g key={`${x},${y}`} data-testid="debug-intersection">
             <circle

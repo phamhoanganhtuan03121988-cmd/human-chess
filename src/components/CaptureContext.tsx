@@ -1,8 +1,10 @@
 import type { CSSProperties } from 'react';
 import { BOARD_HEIGHT, BOARD_WIDTH, getBoardPoint } from '../board/layout.ts';
+import { toViewCoordinate } from '../board/perspective.ts';
 import { SIDE_NAMES_VI, getPieceDisplayName } from '../config/pieceIdentity.ts';
 import type { CombatState } from '../game/controller.ts';
 import { CAPTURE_CONTEXT } from './combat/combatTimeline.ts';
+import { useBoardPerspective } from './BoardPerspective.tsx';
 
 /** Gap left at each end of the trajectory so it never crosses a token face. */
 const END_GAP = 0.42;
@@ -16,8 +18,12 @@ const END_GAP = 0.42;
  */
 export function CaptureContext({ combat, reducedMotion }: { combat: CombatState; reducedMotion: boolean }) {
   const { attacker, defender, move } = combat;
-  const a = getBoardPoint(move.from.x, move.from.y);
-  const d = getBoardPoint(move.to.x, move.to.y);
+  // The trajectory is drawn in the board perspective (the label stays upright).
+  const perspective = useBoardPerspective();
+  const from = toViewCoordinate(move.from.x, move.from.y, perspective);
+  const to = toViewCoordinate(move.to.x, move.to.y, perspective);
+  const a = getBoardPoint(from.x, from.y);
+  const d = getBoardPoint(to.x, to.y);
   const len = Math.hypot(d.x - a.x, d.y - a.y);
   const ux = (d.x - a.x) / len;
   const uy = (d.y - a.y) / len;

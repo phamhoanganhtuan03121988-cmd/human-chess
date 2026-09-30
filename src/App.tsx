@@ -5,6 +5,7 @@ import { CharacterActionCard } from './components/CharacterActionCard.tsx';
 import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { ConfirmNewGameDialog } from './components/ConfirmDialog.tsx';
 import { GameBoard } from './components/GameBoard.tsx';
+import { getBoardPerspective } from './board/perspective.ts';
 import { HelpDialog } from './components/HelpDialog.tsx';
 import { Hud } from './components/Hud.tsx';
 import { ReplayView } from './components/ReplayView.tsx';
@@ -71,6 +72,8 @@ export function App({ initialScreen = 'start' }: AppProps) {
   const isOnline = mode === 'online';
   const online = useOnlineGame(ui, dispatch, isOnline);
   const seated = isOnline && online.seat !== null && online.room !== null;
+  // Presentation only: an online Blue seat sees the board from Blue's side.
+  const boardPerspective = getBoardPerspective(isOnline ? (online.seat?.side ?? null) : null);
   const waitingForOpponent = seated && online.room!.status === 'waiting';
   const showLobby = isOnline && !seated;
   const modalOpen = screen === 'start' || helpOpen || confirmOpen || surrenderOpen || showLobby || waitingForOpponent;
@@ -201,7 +204,13 @@ export function App({ initialScreen = 'start' }: AppProps) {
     <>
       <main className="app" inert={modalOpen || undefined} style={{ '--side-w': historyOpen ? 'var(--side-panel-w)' : '0px' } as React.CSSProperties}>
         {replaying ? (
-          <ReplayView records={ui.game.history} onExit={() => setReplaying(false)} showPanel={historyOpen} debug={debug} />
+          <ReplayView
+            records={ui.game.history}
+            onExit={() => setReplaying(false)}
+            showPanel={historyOpen}
+            debug={debug}
+            perspective={boardPerspective}
+          />
         ) : (
           <>
             <Hud
@@ -224,6 +233,7 @@ export function App({ initialScreen = 'start' }: AppProps) {
                 ui={ui}
                 dispatch={dispatch}
                 debug={debug}
+                perspective={boardPerspective}
                 onNewGame={isOnline ? leaveOnline : () => dispatch({ type: 'newGame' })}
                 onReplay={ply > 0 ? () => setReplaying(true) : null}
               />

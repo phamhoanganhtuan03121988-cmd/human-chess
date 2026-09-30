@@ -4,6 +4,7 @@ import { isPresenting, uiReducer } from '../game/controller.ts';
 import { replayStateAt } from '../game/replay.ts';
 import { useGameAudio } from '../game/useGameAudio.ts';
 import { GameBoard } from './GameBoard.tsx';
+import type { BoardPerspective } from '../board/perspective.ts';
 import { SidePanel } from './SidePanel.tsx';
 
 /** Pause between auto-played moves (after each move finishes). */
@@ -14,6 +15,8 @@ interface ReplayViewProps {
   onExit: () => void;
   showPanel: boolean;
   debug?: boolean;
+  /** Board perspective of the player watching (the replay has no controlled side). */
+  perspective?: BoardPerspective;
 }
 
 /**
@@ -21,7 +24,7 @@ interface ReplayViewProps {
  * movement animation (captures use a short capture pulse). Uses its own
  * controller instance; the real game state is untouched.
  */
-export function ReplayView({ records, onExit, showPanel, debug = false }: ReplayViewProps) {
+export function ReplayView({ records, onExit, showPanel, debug = false, perspective = 'red' }: ReplayViewProps) {
   const [ui, dispatch] = useReducer(uiReducer, records, (r) => replayStateAt(r, 0));
   const [playing, setPlaying] = useState(true);
   useGameAudio(ui, { newGameSound: false });
@@ -94,7 +97,7 @@ export function ReplayView({ records, onExit, showPanel, debug = false }: Replay
         </button>
       </div>
       <div className="game-layout">
-        <GameBoard ui={ui} dispatch={dispatch} debug={debug} showResult={false} />
+        <GameBoard ui={ui} dispatch={dispatch} debug={debug} showResult={false} perspective={perspective} />
         {showPanel && <SidePanel history={records} currentPly={ply} />}
       </div>
     </>

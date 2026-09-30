@@ -5,6 +5,8 @@
  */
 import type { CSSProperties } from 'react';
 import { BOARD_WIDTH, getBoardPoint } from '../../board/layout.ts';
+import { toViewCoordinate } from '../../board/perspective.ts';
+import type { BoardPerspective } from '../../board/perspective.ts';
 import type { Move, Position } from '../../engine/index.ts';
 
 /** Default movement duration (ms). */
@@ -22,11 +24,14 @@ export function getMoveDuration(reducedMotion: boolean): number {
 
 /**
  * Offset from the source to the destination intersection in board units
- * (1 unit = intersection spacing), from the existing board layout.
+ * (1 unit = intersection spacing), from the existing board layout, as drawn
+ * in the given board perspective.
  */
-export function getMoveOffset(move: Move): Position {
-  const from = getBoardPoint(move.from.x, move.from.y);
-  const to = getBoardPoint(move.to.x, move.to.y);
+export function getMoveOffset(move: Move, perspective: BoardPerspective = 'red'): Position {
+  const f = toViewCoordinate(move.from.x, move.from.y, perspective);
+  const t = toViewCoordinate(move.to.x, move.to.y, perspective);
+  const from = getBoardPoint(f.x, f.y);
+  const to = getBoardPoint(t.x, t.y);
   return { x: to.x - from.x, y: to.y - from.y };
 }
 
@@ -36,8 +41,8 @@ export function getMoveOffset(move: Move): Position {
  * container), so the same values are exact at any resolution. Only
  * transform-family properties are animated.
  */
-export function getMovementStyle(move: Move, durationMs: number): CSSProperties {
-  const { x, y } = getMoveOffset(move);
+export function getMovementStyle(move: Move, durationMs: number, perspective: BoardPerspective = 'red'): CSSProperties {
+  const { x, y } = getMoveOffset(move, perspective);
   const unit = 100 / BOARD_WIDTH; // cqw per board unit
   return {
     '--move-x': `${x * unit}cqw`,

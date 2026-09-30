@@ -10,7 +10,9 @@ import {
   type Side,
 } from '../board/geometry.ts';
 import { BOARD_HEIGHT, BOARD_WIDTH, getBoardPoint } from '../board/layout.ts';
+import type { BoardPerspective } from '../board/perspective.ts';
 import { BoardDebugOverlay } from './BoardDebugOverlay.tsx';
+import { BoardPerspectiveProvider } from './BoardPerspective.tsx';
 
 /** Intersections that carry the traditional position marks (cannons and pawns). */
 const POSITION_MARKS: [number, number][] = [
@@ -45,6 +47,12 @@ interface BoardProps {
   over?: boolean;
   /** A capture is being shown on the board (unrelated pieces dim slightly). */
   captureContext?: boolean;
+  /**
+   * Side at the bottom of the screen (presentation only). 'blue' draws every
+   * board layer rotated 180°; the lines and marks are symmetric, so only the
+   * layers placed on intersections move. Text and tokens stay upright.
+   */
+  perspective?: BoardPerspective;
 }
 
 /**
@@ -64,6 +72,7 @@ export function Board({
   waiting = false,
   over = false,
   captureContext = false,
+  perspective = 'red',
 }: BoardProps) {
   const frameHeight = BOARD_HEIGHT + headroom;
   const frameStyle = {
@@ -80,12 +89,14 @@ export function Board({
     waiting && 'board-frame--waiting',
     over && 'board-frame--over',
     captureContext && 'board-frame--context',
+    perspective === 'blue' && 'board-frame--view-blue',
   ];
 
   return (
     <div
       className={frameClasses.filter(Boolean).join(' ')}
       data-testid="board-frame"
+      data-perspective={perspective}
       style={frameStyle}
       onClick={onBackgroundClick}
     >
@@ -98,9 +109,9 @@ export function Board({
           role="img"
         >
           <BoardLines />
-          {debug && <BoardDebugOverlay />}
+          {debug && <BoardDebugOverlay perspective={perspective} />}
         </svg>
-        {children}
+        <BoardPerspectiveProvider value={perspective}>{children}</BoardPerspectiveProvider>
       </div>
     </div>
   );
