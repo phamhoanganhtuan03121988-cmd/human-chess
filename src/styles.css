@@ -1846,3 +1846,120 @@ img { -webkit-user-drag: none; }
 .volume-slider:disabled { opacity: 0.35; cursor: not-allowed; }
 .hud__menu .music-control { flex: 1; justify-content: flex-end; }
 .hud__menu .volume-slider--music { width: 96px; }
+
+/* ------------------------------------------------------------------ */
+/* Phase 15 — online play: start button, lobby, waiting room, HUD.     */
+/* ------------------------------------------------------------------ */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.btn--online {
+  min-width: 220px;
+  border-color: rgba(156, 192, 255, 0.7);
+  color: #d6e4ff;
+  background: linear-gradient(180deg, rgba(45, 90, 168, 0.35), rgba(19, 47, 99, 0.45));
+}
+.btn--online:not(:disabled):hover { border-color: #b9d0ff; }
+.btn--ghost { border-color: transparent; background: none; color: rgba(245, 240, 230, 0.75); }
+.btn--danger { color: #fff1ee; border-color: #e0463a; background: linear-gradient(180deg, #c8321f, #8e1f13); }
+.toolbar__button--danger { border-color: #d0493a; color: #ffb3a8; font-weight: 700; }
+
+/* Lobby */
+.online-lobby .modal { width: min(400px, 100%); display: grid; gap: 12px; text-align: left; }
+.online-lobby .modal__title { text-align: center; margin: 0; }
+.online-lobby__lead { margin: 0; text-align: center; opacity: 0.85; font-size: 14px; }
+.online-lobby__form { display: grid; gap: 10px; }
+.online-lobby__create { width: 100%; min-height: 46px; }
+.online-lobby__or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.online-lobby__or::before, .online-lobby__or::after { content: ''; flex: 1; height: 1px; background: rgba(201, 162, 74, 0.35); }
+.online-lobby__join { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.online-lobby__join .btn { min-height: 44px; }
+.online-lobby__status { margin: 0; text-align: center; font-size: 13px; opacity: 0.8; }
+.online-lobby__problem {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(224, 70, 58, 0.6);
+  background: rgba(142, 31, 19, 0.3);
+  color: #ffc9c0;
+  font-size: 13px;
+}
+.online-lobby__back { justify-self: center; }
+.field { display: grid; gap: 5px; }
+.field__label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
+.field__input {
+  font: inherit;
+  font-size: 16px; /* no iOS zoom on focus */
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(201, 162, 74, 0.6);
+  background: rgba(0, 0, 0, 0.35);
+  color: #f5f0e6;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.field__input:focus { outline: 2px solid var(--gold-hi); outline-offset: 1px; }
+.field__input[aria-invalid='true'] { border-color: #e0463a; }
+.field__input--code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; letter-spacing: 0.3em; text-transform: uppercase; }
+.field__error { margin: -4px 0 0; color: #ffb3a8; font-size: 12.5px; }
+.room-code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; letter-spacing: 0.18em; color: var(--gold-hi); }
+
+/* Waiting room */
+.waiting-room .modal { width: min(400px, 100%); display: grid; gap: 10px; }
+.waiting-room__eyebrow { margin: 0; font-size: 11.5px; letter-spacing: 0.3em; opacity: 0.7; }
+.waiting-room__code { margin: -4px 0 0; font-size: clamp(30px, 9vw, 42px); font-weight: 800; }
+.waiting-room__side { margin: 0; }
+.side-red { color: #ff8a80; }
+.side-blue { color: #9cc0ff; }
+.waiting-room__wait { margin: 0; display: inline-flex; justify-content: center; align-items: center; gap: 8px; opacity: 0.85; }
+.waiting-room__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(246, 227, 161, 0.3);
+  border-top-color: var(--gold-hi);
+  animation: spin 900ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.waiting-room__link { text-align: left; }
+.waiting-room__link .field__input { font-size: 13px; }
+.waiting-room__hint { margin: 0; font-size: 12.5px; opacity: 0.8; }
+.waiting-room__connection { display: flex; justify-content: center; }
+
+/* Connection badge + online HUD */
+.connection-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.connection-badge__dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.connection-badge--ok .connection-badge__dot { background: #4cc97a; box-shadow: 0 0 6px rgba(76, 201, 122, 0.8); }
+.connection-badge--wait .connection-badge__dot { background: #f2c14e; animation: status-dot 0.9s ease-in-out infinite; }
+.connection-badge--bad .connection-badge__dot { background: #e0463a; }
+.hud__online { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; }
+.hud__room { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; letter-spacing: 0.1em; opacity: 0.8; }
+.hud__opponent { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.hud__away { color: #f2c14e; white-space: nowrap; }
+@media (max-width: 700px) {
+  .hud__room, .hud__opponent { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .waiting-room__spinner, .connection-badge--wait .connection-badge__dot { animation: none; }
+}
+/* Narrow phones in online play: status pill, connection dot and actions share one row. */
+@media (max-width: 480px) {
+  .toolbar { gap: 6px; }
+  .status { padding: 3px 10px; gap: 6px; letter-spacing: 0.03em; font-size: 13px; }
+  .hud__online { flex: none; gap: 0; }
+  .toolbar__button--danger, .toolbar__button--accent { padding-left: 10px; padding-right: 10px; }
+}
+.field__input { width: 100%; min-width: 0; }
+.field { min-width: 0; }
+@media (max-height: 460px) {
+  .waiting-room .modal, .online-lobby .modal { gap: 6px; padding: 14px 20px; }
+  .waiting-room__code { font-size: 28px; }
+  .waiting-room__link .field__input { min-height: 36px; }
+}

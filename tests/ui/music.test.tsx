@@ -127,10 +127,10 @@ describe('background music', () => {
     expect(getMusicStatus()).toBe('idle');
   });
 
-  it('CHƠI NGAY (a user gesture) starts one looping track through the shared AudioContext', () => {
+  it('CHƠI VỚI MÁY (a user gesture) starts one looping track through the shared AudioContext', () => {
     render(<App />);
     fireEvent.pointerDown(window);
-    fireEvent.click(screen.getByText('CHƠI NGAY'));
+    fireEvent.click(screen.getByText('CHƠI VỚI MÁY'));
     act(() => void vi.advanceTimersByTime(START_TRANSITION_MS + 20));
     expect(contexts).toHaveLength(1);
     expect(elements).toHaveLength(1);

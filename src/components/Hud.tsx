@@ -7,6 +7,9 @@ import { SoundToggle } from './SoundToggle.tsx';
 import { StatusPanel } from './StatusPanel.tsx';
 import { DifficultyPicker } from './ui/DifficultyPicker.tsx';
 import { MusicControl } from './ui/MusicControl.tsx';
+import { ConnectionBadge } from './online/ConnectionBadge.tsx';
+import type { ConnectionStatus } from '../multiplayer/client.ts';
+import type { PlayerInfo } from '../multiplayer/types.ts';
 import { VolumeSlider } from './ui/VolumeSlider.tsx';
 
 interface HudProps {
@@ -23,6 +26,19 @@ interface HudProps {
   onToggleHistory: () => void;
   /** Development-only board debug switch (shown with ?debug=1). */
   debugControl?: ReactNode;
+  /** Online play: connection, room and the online actions (replaces difficulty / new game). */
+  online?: OnlineHud | null;
+}
+
+export interface OnlineHud {
+  readonly connection: ConnectionStatus;
+  readonly roomId: string;
+  readonly mySide: Side;
+  readonly opponent: PlayerInfo | null;
+  /** The game is in progress (surrender possible) vs finished (leave). */
+  readonly playing: boolean;
+  readonly onSurrender: () => void;
+  readonly onLeave: () => void;
 }
 
 /**
@@ -46,15 +62,17 @@ export function Hud(props: HudProps) {
     const inMenu = idSuffix === 'menu';
     return (
       <>
-        <label className="hud__field">
-          <span className="hud__label">Độ khó</span>
-          <DifficultyPicker
-            id={`difficulty-${idSuffix}`}
-            value={props.difficulty}
-            onChange={props.onDifficulty}
-            disabled={props.difficultyDisabled}
-          />
-        </label>
+        {!props.online && (
+          <label className="hud__field">
+            <span className="hud__label">Độ khó</span>
+            <DifficultyPicker
+              id={`difficulty-${idSuffix}`}
+              value={props.difficulty}
+              onChange={props.onDifficulty}
+              disabled={props.difficultyDisabled}
+            />
+          </label>
+        )}
         <label className="hud__field">
           <span className="hud__label" aria-hidden="true">
             {inMenu ? 'Âm lượng' : '🔉'}
@@ -88,18 +106,46 @@ export function Hud(props: HudProps) {
 
   return (
     <header className="toolbar" role="toolbar" aria-label="Bảng điều khiển">
-      <StatusPanel status={props.status} activity={props.activity} aiSide={props.aiSide} />
+      <StatusPanel
+        status={props.status}
+        activity={props.activity}
+        aiSide={props.aiSide}
+        onlineSide={props.online?.mySide ?? null}
+      />
+      {props.online && <OnlineHudInfo online={props.online} />}
       <div className="hud__secondary">{secondary('bar')}</div>
       <SoundToggle />
-      <button
-        type="button"
-        className="toolbar__button toolbar__button--accent"
-        disabled={props.newGameDisabled}
-        data-testid="new-game"
-        onClick={props.onNewGame}
-      >
-        Ván mới
-      </button>
+      {props.online ? (
+        props.online.playing ? (
+          <button
+            type="button"
+            className="toolbar__button toolbar__button--danger"
+            data-testid="surrender"
+            onClick={props.online.onSurrender}
+          >
+            Đầu hàng
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="toolbar__button toolbar__button--accent"
+            data-testid="leave-online"
+            onClick={props.online.onLeave}
+          >
+            Rời phòng
+          </button>
+        )
+      ) : (
+        <button
+          type="button"
+          className="toolbar__button toolbar__button--accent"
+          disabled={props.newGameDisabled}
+          data-testid="new-game"
+          onClick={props.onNewGame}
+        >
+          Ván mới
+        </button>
+      )}
       <div className="hud__more" ref={menu}>
         <button
           type="button"
@@ -128,5 +174,28 @@ export function Hud(props: HudProps) {
         )}
       </div>
     </header>
+  );
+}
+
+/** Connection state, room code and opponent (with a warning while the opponent is away). */
+function OnlineHudInfo({ online }: { online: OnlineHud }) {
+  const away = online.opponent !== null && !online.opponent.connected && online.playing;
+  return (
+    <div className="hud__online" data-testid="online-hud">
+      <ConnectionBadge status={online.connection} compact />
+      <span className="hud__room" title="Mã phòng">
+        #{online.roomId}
+      </span>
+      {online.opponent && (
+        <span className={`hud__opponent side-${online.opponent.side}`} title="Đối thủ" data-testid="opponent">
+          vs {online.opponent.nickname}
+        </span>
+      )}
+      {away && (
+        <span className="hud__away" role="status" data-testid="opponent-away">
+          Đối thủ mất kết nối…
+        </span>
+      )}
+    </div>
   );
 }

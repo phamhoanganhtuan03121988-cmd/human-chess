@@ -57,7 +57,7 @@ const advance = (ms: number) => {
 };
 const status = () => screen.getByTestId('status').textContent;
 const main = () => document.querySelector('main.app')!;
-const enterGame = (label = 'CHƠI NGAY') => {
+const enterGame = (label = 'CHƠI VỚI MÁY') => {
   fireEvent.click(screen.getByText(label));
   advance(START_TRANSITION_MS + 20);
 };
@@ -70,7 +70,7 @@ const playOpeningExchange = () => {
 };
 
 describe('start screen', () => {
-  it('shows the title, CHƠI NGAY, difficulty and sound; the game behind is inert', () => {
+  it('shows the title, CHƠI VỚI MÁY, difficulty and sound; the game behind is inert', () => {
     render(<App />);
     const start = screen.getByTestId('start-screen');
     expect(within(start).getByRole('heading', { name: 'CỜ TƯỚNG' })).toBeTruthy();
@@ -82,7 +82,7 @@ describe('start screen', () => {
     expect(select.value).toBe('normal');
     expect(within(start).queryByRole('radiogroup')).toBeNull();
     expect(within(start).getByTestId('sound-toggle')).toBeTruthy();
-    expect(document.activeElement?.textContent).toBe('CHƠI NGAY');
+    expect(document.activeElement?.textContent).toBe('CHƠI VỚI MÁY');
     expect(main().hasAttribute('inert')).toBe(true);
     expect(screen.queryByTestId('resume-prompt')).toBeNull();
   });
@@ -97,9 +97,9 @@ describe('start screen', () => {
     expect((screen.getAllByTestId('difficulty-select')[0] as HTMLSelectElement).value).toBe('hard');
   });
 
-  it('CHƠI NGAY fades the start screen out, then the board is interactive', () => {
+  it('CHƠI VỚI MÁY fades the start screen out, then the board is interactive', () => {
     render(<App />);
-    fireEvent.click(screen.getByText('CHƠI NGAY'));
+    fireEvent.click(screen.getByText('CHƠI VỚI MÁY'));
     expect(screen.getByTestId('start-screen').closest('.start-screen')!.className).toContain('is-leaving');
     advance(START_TRANSITION_MS + 20);
     expect(screen.queryByTestId('start-screen')).toBeNull();
@@ -142,7 +142,7 @@ describe('save and resume', () => {
     localStorage.setItem(SAVE_KEY, '{"version":1,"moves":[[4,9,4,7]]}');
     render(<App />);
     expect(screen.queryByTestId('resume-prompt')).toBeNull();
-    expect(screen.getByText('CHƠI NGAY')).toBeTruthy();
+    expect(screen.getByText('CHƠI VỚI MÁY')).toBeTruthy();
     expect(localStorage.getItem(SAVE_KEY)).toBeNull();
   });
 

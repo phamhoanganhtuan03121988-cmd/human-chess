@@ -198,7 +198,7 @@ export function applyMusic(): void {
   }
 }
 
-/** Call from a user gesture (e.g. "CHƠI NGAY"): allows the music to start. */
+/** Call from a user gesture (e.g. "CHƠI VỚI MÁY"): allows the music to start. */
 export function requestMusic(): void {
   wanted = true;
   unlockAudio();

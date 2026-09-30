@@ -37,7 +37,7 @@ function snapshot(ui: UiState): Seen {
     selectedKey: ui.selected ? `${ui.selected.x},${ui.selected.y}` : null,
     movementId: ui.movement?.id ?? null,
     inCheck: ui.game.inCheck,
-    over: ui.game.status !== 'playing',
+    over: ui.game.status !== 'playing' || ui.forfeit !== null,
     activity: getActivity(ui),
   };
 }
@@ -65,6 +65,11 @@ export function useGameAudio(ui: UiState, options: GameAudioOptions = {}): void 
     if (now.movementId !== null && now.movementId !== prev.movementId) playMoveSound();
 
     let important = false;
+    // Online surrender: the result arrives without a move.
+    if (now.over && !prev.over && now.ply === prev.ply && ui.forfeit) {
+      playGameOverSound('checkmate');
+      important = true;
+    }
     if (now.ply > prev.ply) {
       const last = ui.game.history[now.ply - 1]!;
       // Captures already had their impact inside the combat; normal moves land.

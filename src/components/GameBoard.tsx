@@ -14,10 +14,10 @@ import {
   getGameOverView,
   getPlacements,
   isCaptureTarget,
+  isFinished,
   isPresenting,
 } from '../game/controller.ts';
 import { GameOverBanner } from './GameOverBanner.tsx';
-import { isGameOver } from '../engine/index.ts';
 import { Board } from './Board.tsx';
 import { getImpactProfile } from './combat/combatFx.ts';
 import { useReducedMotion } from './combat/useReducedMotion.ts';
@@ -70,9 +70,9 @@ export function GameBoard({ ui, dispatch, debug = false, onNewGame, onReplay = n
   const contextMove = context?.move ?? replayCapture;
 
   const activity = getActivity(ui);
-  const interactive = !isGameOver(game) && !isPresenting(ui) && getAiState(ui) === 'idle';
+  const interactive = !isFinished(ui) && !isPresenting(ui) && getAiState(ui) === 'idle';
   const checkedGeneral = game.inCheck ? findGeneral(game.board, game.turn) : null;
-  const gameOver = getGameOverView(game);
+  const gameOver = getGameOverView(game, ui.forfeit);
   const lastMoveSide = lastMove ? (pieceAt(game.board, lastMove.to)?.side ?? null) : null;
 
   return (

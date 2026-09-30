@@ -5,6 +5,7 @@ const REASON: Record<Extract<StatusView, { kind: 'over' }>['reason'], string> = 
   checkmate: 'CHIẾU BÍ',
   stalemate: 'BẾ TẮC',
   general_captured: 'TƯỚNG BỊ BẮT',
+  surrender: 'ĐẦU HÀNG',
 };
 
 const SIDE_LABEL: Record<Side, string> = { red: 'ĐỎ', blue: 'XANH' };
@@ -16,11 +17,17 @@ interface StatusPanelProps {
   activity?: Activity;
   /** Side played by the computer, if any. */
   aiSide?: Side | null;
+  /** Online play: the side this player controls (texts become "ĐẾN LƯỢT BẠN" / "ĐANG CHỜ …"). */
+  onlineSide?: Side | null;
 }
 
 /** Main status line for the current turn / activity. */
-function mainText(status: Extract<StatusView, { kind: 'turn' }>, activity: Activity): string {
+function mainText(status: Extract<StatusView, { kind: 'turn' }>, activity: Activity, onlineSide: Side | null = null): string {
   const side = SIDE_LABEL[status.side];
+  if (onlineSide !== null && activity === 'idle') {
+    if (status.side !== onlineSide) return `ĐANG CHỜ ${side}`;
+    return status.check ? 'BẠN BỊ CHIẾU' : 'ĐẾN LƯỢT BẠN';
+  }
   if (activity === 'combat') return `${side} TẤN CÔNG`;
   if (activity === 'moving') return `${side} ĐANG ĐI`;
   if (status.thinking || activity === 'thinking') return `${side} ĐANG NGHĨ...`;
@@ -40,8 +47,12 @@ function renderMain(text: string) {
 }
 
 /** Short hint telling the player whether they can act. */
-function hintText(status: StatusView, activity: Activity, aiSide: Side | null): string {
+function hintText(status: StatusView, activity: Activity, aiSide: Side | null, onlineSide: Side | null = null): string {
   if (status.kind === 'over') return 'Ván đã kết thúc';
+  if (onlineSide !== null && activity === 'idle') {
+    if (status.side !== onlineSide) return 'Đối thủ đang suy nghĩ';
+    return status.check ? 'Bảo vệ Tướng!' : 'Chọn quân để đi';
+  }
   const aiActing = aiSide !== null && status.side === aiSide;
   switch (activity) {
     case 'combat':
@@ -61,8 +72,8 @@ function hintText(status: StatusView, activity: Activity, aiSide: Side | null): 
  * status and UI activity. The pill re-mounts when the turn or result
  * changes, which plays a short entry transition.
  */
-export function StatusPanel({ status, activity = 'idle', aiSide = null }: StatusPanelProps) {
-  const hint = hintText(status, activity, aiSide);
+export function StatusPanel({ status, activity = 'idle', aiSide = null, onlineSide = null }: StatusPanelProps) {
+  const hint = hintText(status, activity, aiSide, onlineSide);
   if (status.kind === 'over') {
     return (
       <div className="status-panel">
@@ -82,7 +93,8 @@ export function StatusPanel({ status, activity = 'idle', aiSide = null }: Status
       </div>
     );
   }
-  const waiting = activity !== 'idle' || (aiSide !== null && status.side === aiSide);
+  const waiting =
+    activity !== 'idle' || (aiSide !== null && status.side === aiSide) || (onlineSide !== null && status.side !== onlineSide);
   const classes = [
     'status',
     `status--${status.side}`,
@@ -100,7 +112,7 @@ export function StatusPanel({ status, activity = 'idle', aiSide = null }: Status
         data-activity={activity}
       >
         <span className="status__dot" aria-hidden="true" />
-        <span className="status__main">{renderMain(mainText(status, activity))}</span>
+        <span className="status__main">{renderMain(mainText(status, activity, onlineSide))}</span>
         {(status.thinking || activity === 'thinking') && (
           <span className="status__dots" data-testid="thinking-dots" aria-hidden="true">
             <i />

@@ -10,11 +10,13 @@ interface StartScreenProps {
   canResume: boolean;
   onPlay: () => void;
   onResume: () => void;
+  /** CHƠI ONLINE (private room). */
+  onPlayOnline: () => void;
   leaving: boolean;
 }
 
 /** Title screen over the (dimmed) board: play / resume, difficulty and sound. */
-export function StartScreen({ difficulty, onDifficulty, canResume, onPlay, onResume, leaving }: StartScreenProps) {
+export function StartScreen({ difficulty, onDifficulty, canResume, onPlay, onResume, onPlayOnline, leaving }: StartScreenProps) {
   return (
     <Modal labelledBy="start-title" className={leaving ? 'start-screen is-leaving' : 'start-screen'} testId="start-screen">
       <div className="start">
@@ -39,9 +41,12 @@ export function StartScreen({ difficulty, onDifficulty, canResume, onPlay, onRes
           </div>
         ) : (
           <button type="button" className="btn btn--primary btn--large" data-autofocus onClick={onPlay}>
-            CHƠI NGAY
+            CHƠI VỚI MÁY
           </button>
         )}
+        <button type="button" className="btn btn--online" data-testid="play-online" onClick={onPlayOnline}>
+          CHƠI ONLINE
+        </button>
         <div className="start__settings">
           <label className="start__row" htmlFor="start-difficulty">
             <span className="start__label">Độ khó</span>
@@ -54,7 +59,7 @@ export function StartScreen({ difficulty, onDifficulty, canResume, onPlay, onRes
             <SoundToggle />
           </div>
         </div>
-        <p className="start__hint">Bạn cầm quân Đỏ · Máy cầm quân Xanh</p>
+        <p className="start__hint">Với máy: bạn cầm quân Đỏ · độ khó áp dụng cho máy</p>
       </div>
     </Modal>
   );

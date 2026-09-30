@@ -75,6 +75,19 @@ export interface UiState {
   readonly difficulty: Difficulty;
   /** Read-only replay of recorded moves: no input, no AI, short captures. */
   readonly replay: boolean;
+  /**
+   * Online play: the only side this player controls (null = local play). The
+   * other side's moves arrive from the room server.
+   */
+  readonly controlledSide: Side | null;
+  /**
+   * Online play: a move the player chose and sent to the room server. It is
+   * NOT applied: the board waits for MOVE_ACCEPTED (then plays it like any
+   * move, with the same combat/animation) or MOVE_REJECTED (cleared).
+   */
+  readonly pendingMove: Move | null;
+  /** Online play: the game ended by surrender (the engine position is still 'playing'). */
+  readonly forfeit: { readonly winner: Side } | null;
 }
 
 /** Whether the computer is currently choosing a move. */
@@ -86,6 +99,8 @@ export interface UiOptions {
   readonly replay?: boolean;
   /** Last move to highlight (e.g. when restoring a saved game). */
   readonly lastMove?: Move | null;
+  /** Online play: this player's side. */
+  readonly controlledSide?: Side | null;
 }
 
 export type UiAction =
@@ -105,7 +120,17 @@ export type UiAction =
   | { readonly type: 'replayMove'; readonly gameId: number; readonly ply: number; readonly move: Move }
   /** Replace the whole UI state (resume a saved game, jump within a replay). Ignored while presenting. */
   | { readonly type: 'load'; readonly state: UiState }
-  | { readonly type: 'setDifficulty'; readonly difficulty: Difficulty };
+  | { readonly type: 'setDifficulty'; readonly difficulty: Difficulty }
+  /**
+   * Online: the room server accepted move number ply + 1 (either player's).
+   * Played exactly like a local or AI move (same capture context / combat /
+   * animation); ignored if it does not fit the current position.
+   */
+  | { readonly type: 'remoteMove'; readonly gameId: number; readonly ply: number; readonly move: Move }
+  /** Online: the sent move was rejected (or could not be sent). */
+  | { readonly type: 'clearPending' }
+  /** Online: the room server ended the game by surrender. */
+  | { readonly type: 'forfeit'; readonly winner: Side };
 
 let nextGameId = 1;
 
@@ -121,7 +146,15 @@ export function createUiState(game: GameState = createInitialGameState(), option
     aiSide: options.replay ? null : (options.aiSide ?? null),
     difficulty: options.difficulty ?? DEFAULT_DIFFICULTY,
     replay: options.replay ?? false,
+    controlledSide: options.replay ? null : (options.controlledSide ?? null),
+    pendingMove: null,
+    forfeit: null,
   };
+}
+
+/** The game has ended: by the engine (mate, stalemate, general taken) or by surrender. */
+export function isFinished(state: UiState): boolean {
+  return isGameOver(state.game) || state.forfeit !== null;
 }
 
 /**
@@ -130,7 +163,7 @@ export function createUiState(game: GameState = createInitialGameState(), option
  */
 export function getAiState(state: UiState): AiState {
   const { game, aiSide } = state;
-  return aiSide !== null && game.turn === aiSide && !isPresenting(state) && !isGameOver(game) ? 'thinking' : 'idle';
+  return aiSide !== null && game.turn === aiSide && !isPresenting(state) && !isFinished(state) ? 'thinking' : 'idle';
 }
 
 let nextCombatId = 1;
@@ -148,16 +181,19 @@ let nextMovementId = 1;
 export type Activity = 'idle' | 'thinking' | 'moving' | 'combat' | 'over';
 
 export function getActivity(state: UiState): Activity {
-  if (isGameOver(state.game)) return 'over';
+  if (isFinished(state)) return 'over';
   if (state.combat) return 'combat';
-  if (state.movement) return 'moving';
+  if (state.movement || state.pendingMove) return 'moving';
   if (getAiState(state) === 'thinking') return 'thinking';
   return 'idle';
 }
 
-/** True while a capture combat or a movement animation is being presented. */
+/**
+ * True while a capture combat or a movement animation is being presented, or
+ * (online) while a sent move waits for the server — input is locked.
+ */
 export function isPresenting(state: UiState): boolean {
-  return state.combat !== null || state.movement !== null;
+  return state.combat !== null || state.movement !== null || state.pendingMove !== null;
 }
 
 /** The phase of the current combat, or 'idle'. */
@@ -187,11 +223,14 @@ export function handleClick(state: UiState, position: Position): UiState {
   if (state.replay) return state; // replays are watched, not played
   if (isPresenting(state)) return state; // board is frozen during combat / movement
   if (state.aiSide !== null && state.game.turn === state.aiSide) return state; // AI's turn
-  if (isGameOver(state.game)) return clearSelection(state);
+  if (state.controlledSide !== null && state.game.turn !== state.controlledSide) return state; // opponent's turn (online)
+  if (isFinished(state)) return clearSelection(state);
 
   if (state.selected) {
     if (same(state.selected, position)) return clearSelection(state);
     const move = state.legalMoves.find((m) => same(m.to, position));
+    // Online: the move is only requested here; the server decides (see remoteMove).
+    if (move && state.controlledSide !== null) return { ...state, selected: null, legalMoves: [], pendingMove: move };
     if (move) return playMove(state, move);
   }
 
@@ -266,7 +305,19 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       if (!isLegalMove(state.game, action.move)) return state;
       return playMove(state, action.move);
     case 'load':
-      return isPresenting(state) ? state : action.state;
+      // A pending (unsent/unanswered) online move never blocks a resynchronisation.
+      return state.combat || state.movement ? state : action.state;
+    case 'remoteMove':
+      if (state.controlledSide === null || state.replay) return state;
+      if (action.gameId !== state.gameId || action.ply !== state.game.history.length) return state;
+      if (state.combat || state.movement || isFinished(state)) return state;
+      if (!isLegalMove(state.game, action.move)) return state;
+      return playMove({ ...state, pendingMove: null }, action.move);
+    case 'clearPending':
+      return state.pendingMove ? { ...state, pendingMove: null } : state;
+    case 'forfeit':
+      if (isFinished(state)) return state;
+      return { ...clearSelection(state), pendingMove: null, forfeit: { winner: action.winner } };
     case 'setDifficulty':
       return state.difficulty === action.difficulty ? state : { ...state, difficulty: action.difficulty };
     case 'aiMove':
@@ -304,12 +355,15 @@ export function isCaptureTarget(state: UiState, position: Position): boolean {
   return state.legalMoves.some((m) => same(m.to, position)) && pieceAt(state.game.board, position) !== null;
 }
 
+export type ResultReason = 'checkmate' | 'stalemate' | 'general_captured' | 'surrender';
+
 export type StatusView =
   | { readonly kind: 'turn'; readonly side: Side; readonly check: boolean; readonly thinking: boolean }
-  | { readonly kind: 'over'; readonly winner: Side; readonly reason: 'checkmate' | 'stalemate' | 'general_captured' };
+  | { readonly kind: 'over'; readonly winner: Side; readonly reason: ResultReason };
 
 /** Status panel content, read straight from the engine's GameStatus plus the AI state. */
-export function getStatusView(game: GameState, aiState: AiState = 'idle'): StatusView {
+export function getStatusView(game: GameState, aiState: AiState = 'idle', forfeit: UiState['forfeit'] = null): StatusView {
+  if (forfeit) return { kind: 'over', winner: forfeit.winner, reason: 'surrender' };
   if (game.status !== 'playing' && game.winner) {
     return { kind: 'over', winner: game.winner, reason: game.status };
   }
@@ -350,15 +404,27 @@ export interface GameOverView {
   readonly winnerText: string;
   /** One-sentence explanation of what happened. */
   readonly detail: string;
-  readonly reason: 'checkmate' | 'stalemate' | 'general_captured';
+  readonly reason: ResultReason;
   /** The losing side's General, if still on the board. */
   readonly defeatedGeneral: Position | null;
 }
 
 const SIDE_VI: Record<Side, string> = { red: 'Đỏ', blue: 'Xanh' };
 
-/** Presentation of a finished game, read from the engine status. Null while playing. */
-export function getGameOverView(game: GameState): GameOverView | null {
+/** Presentation of a finished game, read from the engine status (or a surrender). Null while playing. */
+export function getGameOverView(game: GameState, forfeit: UiState['forfeit'] = null): GameOverView | null {
+  if (forfeit) {
+    const loser = opponent(forfeit.winner);
+    return {
+      title: 'ĐẦU HÀNG',
+      winner: forfeit.winner,
+      loser,
+      winnerText: `${SIDE_VI[forfeit.winner].toUpperCase()} THẮNG`,
+      detail: `${SIDE_VI[loser]} đã đầu hàng.`,
+      reason: 'surrender',
+      defeatedGeneral: findGeneral(game.board, loser),
+    };
+  }
   if (game.status === 'playing' || !game.winner) return null;
   const winner = game.winner;
   const loser = opponent(winner);
