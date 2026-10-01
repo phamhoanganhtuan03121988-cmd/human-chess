@@ -28,6 +28,9 @@ interface HudProps {
   debugControl?: ReactNode;
   /** Online play: connection, room and the online actions (replaces difficulty / new game). */
   online?: OnlineHud | null;
+  /** Current presentation mode: 2D or 3D. */
+  viewMode?: '2d' | '3d';
+  onToggleViewMode?: () => void;
 }
 
 export interface OnlineHud {
@@ -99,6 +102,23 @@ export function Hud(props: HudProps) {
         >
           ☰{inMenu && <span className="hud__text">Lịch sử nước đi</span>}
         </button>
+        {props.onToggleViewMode && (
+          <button
+            type="button"
+            className={props.viewMode === '3d' ? 'toolbar__button is-on' : 'toolbar__button'}
+            aria-label={props.viewMode === '3d' ? 'Chuyển về bàn cờ 2D' : 'Chuyển sang bàn cờ 3D'}
+            title={props.viewMode === '3d' ? 'Chuyển về bàn cờ 2D' : 'Chuyển sang bàn cờ 3D'}
+            data-testid="view-mode-toggle"
+            onClick={props.onToggleViewMode}
+          >
+            {props.viewMode === '3d' ? '3D' : '2D'}
+            {inMenu && (
+              <span className="hud__text">
+                {props.viewMode === '3d' ? 'Chế độ: 3D (Đang bật)' : 'Chế độ: 2D (Chuyển sang 3D)'}
+              </span>
+            )}
+          </button>
+        )}
         {props.debugControl}
       </>
     );

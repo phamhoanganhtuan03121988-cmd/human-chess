@@ -32,7 +32,7 @@ interface Layout {
  * (phones in portrait).
  */
 function measure(): Layout {
-  const frame = document.querySelector('[data-testid="board-frame"]')?.getBoundingClientRect();
+  const frame = (document.querySelector('[data-testid="board-frame"]') || document.querySelector('[data-testid="game-board-3d"]'))?.getBoundingClientRect();
   if (!frame || frame.width === 0) return { placement: 'below', style: {} };
   const gutter = frame.left - 16;
   if (gutter >= MIN_SIDE_GUTTER) {

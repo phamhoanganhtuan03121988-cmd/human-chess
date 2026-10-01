@@ -5,6 +5,7 @@ import { CharacterActionCard } from './components/CharacterActionCard.tsx';
 import { CombatOverlay } from './components/combat/CombatOverlay.tsx';
 import { ConfirmNewGameDialog } from './components/ConfirmDialog.tsx';
 import { GameBoard } from './components/GameBoard.tsx';
+import { GameBoard3D } from './components/GameBoard3D.tsx';
 import { getBoardPerspective } from './board/perspective.ts';
 import { HelpDialog } from './components/HelpDialog.tsx';
 import { Hud } from './components/Hud.tsx';
@@ -68,6 +69,8 @@ export function App({ initialScreen = 'start' }: AppProps) {
   const [surrenderOpen, setSurrenderOpen] = useState(false);
   const [debug, setDebug] = useState(isBoardDebugEnabled);
   const showDebugControl = useRef(isBoardDebugEnabled()).current;
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+  const toggleViewMode = useCallback(() => setViewMode((m) => (m === '2d' ? '3d' : '2d')), []);
 
   const inGame = screen === 'game' && !leaving;
   const isOnline = mode === 'online';
@@ -228,17 +231,31 @@ export function App({ initialScreen = 'start' }: AppProps) {
               onToggleHistory={() => setHistoryOpen((o) => !o)}
               debugControl={debugControl}
               online={onlineHud}
+              viewMode={viewMode}
+              onToggleViewMode={toggleViewMode}
             />
             <div className="game-layout">
               <div className="game-board-area">
-                <GameBoard
-                  ui={ui}
-                  dispatch={dispatch}
-                  debug={debug}
-                  perspective={boardPerspective}
-                  onNewGame={isOnline ? leaveOnline : () => dispatch({ type: 'newGame' })}
-                  onReplay={ply > 0 ? () => setReplaying(true) : null}
-                />
+                {viewMode === '3d' ? (
+                  <GameBoard3D
+                    ui={ui}
+                    dispatch={dispatch}
+                    debug={debug}
+                    perspective={boardPerspective}
+                    onNewGame={isOnline ? leaveOnline : () => dispatch({ type: 'newGame' })}
+                    onReplay={ply > 0 ? () => setReplaying(true) : null}
+                    onFallbackTo2D={() => setViewMode('2d')}
+                  />
+                ) : (
+                  <GameBoard
+                    ui={ui}
+                    dispatch={dispatch}
+                    debug={debug}
+                    perspective={boardPerspective}
+                    onNewGame={isOnline ? leaveOnline : () => dispatch({ type: 'newGame' })}
+                    onReplay={ply > 0 ? () => setReplaying(true) : null}
+                  />
+                )}
                 {isOnline && seated && (
                   <OnlineConnectionBanner
                     connection={online.connection}
