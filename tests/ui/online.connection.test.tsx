@@ -27,6 +27,19 @@ beforeEach(() => {
   remote = createLoopback(server);
   setTransportFactory(loop.factory);
   opponents = [];
+
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 390 });
+  Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 844 });
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query.includes('max-width: 700px') ? window.innerWidth <= 700 : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia;
 });
 
 afterEach(() => {
@@ -93,6 +106,7 @@ describe('mobile connection banner', () => {
 
     // Turn status in HUD remains intact and unaffected
     expect(screen.getByTestId('status').textContent).toBe('ĐẾN LƯỢT BẠN');
+    expect(screen.queryByTestId('opponent-away')).toBeNull();
 
     // Board and banner are both in the DOM
     const boardFrame = screen.getByTestId('board-frame');
@@ -113,6 +127,36 @@ describe('mobile connection banner', () => {
     expect(screen.queryByTestId('connection-banner')).toBeNull();
   });
 
+  it('displays "Đối thủ mất kết nối…" then "Đã kết nối lại" on desktop HUD when opponent drops and rejoins', async () => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 768 });
+
+    const code = await createRoomAsRed();
+    const blue = await blueJoins(code);
+
+    // Opponent drops
+    remote.dropAll();
+    await run(40);
+
+    // Desktop HUD shows away text
+    expect(screen.getByTestId('opponent-away').textContent).toContain('Đối thủ mất kết nối…');
+
+    // Opponent reconnects
+    const blueReconnected = new MultiplayerClient(remote.factory, { persist: false });
+    opponents.push(blueReconnected);
+    blueReconnected.resume(blue.seat!);
+    await run(60);
+
+    // Away text disappears and "Đã kết nối lại" appears
+    expect(screen.queryByTestId('opponent-away')).toBeNull();
+    const reconnected = screen.getByTestId('opponent-reconnected');
+    expect(reconnected.textContent).toBe('Đã kết nối lại');
+
+    // Auto-hides after 2.5s
+    await run(2600);
+    expect(screen.queryByTestId('opponent-reconnected')).toBeNull();
+  });
+
   it('shows "Đang chờ kết nối lại..." when local player disconnects, then "Đã kết nối lại" upon reconnect', async () => {
     const code = await createRoomAsRed();
     await blueJoins(code);
@@ -130,6 +174,7 @@ describe('mobile connection banner', () => {
 
     // Turn status in HUD remains intact
     expect(screen.getByTestId('status').textContent).toBe('ĐẾN LƯỢT BẠN');
+    expect(screen.queryByTestId('opponent-away')).toBeNull();
 
     // Local player reconnects
     loop.setOffline(false);
@@ -235,5 +280,41 @@ describe('mobile connection banner', () => {
     // Banner reappears since opponent is disconnected
     expect(screen.getByTestId('connection-banner')).toBeTruthy();
     expect(screen.getByTestId('connection-banner').textContent).toContain('Đối thủ mất kết nối');
+  });
+
+  describe('target viewports', () => {
+    const viewports = [
+      { name: 'iPhone 12/13/14 (390x844)', width: 390, height: 844, isPortrait: true },
+      { name: 'iPhone X/XS/11 Pro (375x812)', width: 375, height: 812, isPortrait: true },
+      { name: 'iPhone 14/15 Pro (393x852)', width: 393, height: 852, isPortrait: true },
+      { name: 'Landscape 844x390', width: 844, height: 390, isPortrait: false },
+      { name: 'Landscape 812x375', width: 812, height: 375, isPortrait: false },
+      { name: 'Desktop PC 1024x768', width: 1024, height: 768, isPortrait: false },
+    ];
+
+    for (const vp of viewports) {
+      it(`handles connection banner and HUD cleanly on ${vp.name}`, async () => {
+        Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: vp.width });
+        Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: vp.height });
+
+        const code = await createRoomAsRed();
+        await blueJoins(code);
+
+        // Opponent drops
+        remote.dropAll();
+        await run(40);
+
+        if (vp.isPortrait) {
+          // On mobile portrait: HUD never renders opponent-away text
+          expect(screen.queryByTestId('opponent-away')).toBeNull();
+          // Banner displays below board
+          expect(screen.getByTestId('connection-banner')).toBeTruthy();
+          expect(screen.getByTestId('connection-banner').textContent).toContain('Đối thủ mất kết nối');
+        } else {
+          // On landscape / wide screens: opponent-away is in the toolbar
+          expect(screen.getByTestId('opponent-away')).toBeTruthy();
+        }
+      });
+    }
   });
 });

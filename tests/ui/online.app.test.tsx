@@ -275,6 +275,64 @@ describe('room links', () => {
     expect(screen.getByTestId('start-screen')).toBeTruthy();
     expect(location.pathname).toBe('/');
   });
+
+  it('a disconnected player can rejoin via lobby code input without ROOM_FULL error', async () => {
+    // Red creates room
+    const a = new MultiplayerClient(remote.factory, { persist: false });
+    opponents.push(a);
+    a.createRoom('Tuấn');
+    await run(40);
+    const roomId = a.seat!.roomId;
+
+    // Blue joins via App UI
+    render(<App />);
+    fireEvent.click(screen.getByTestId('play-online'));
+    const lobby = screen.getByTestId('online-lobby');
+    fireEvent.change(within(lobby).getByTestId('nickname-input'), { target: { value: 'Lan' } });
+    fireEvent.change(within(lobby).getByTestId('room-input'), { target: { value: roomId } });
+    fireEvent.click(within(lobby).getByTestId('join-room'));
+    await run(60);
+
+    expect(screen.queryByTestId('online-lobby')).toBeNull();
+    expect(status()).toBe('ĐANG CHỜ ĐỎ');
+
+    // Red makes the first move (Cannon 1,7 -> 4,7)
+    a.requestMove(1, mv(1, 7, 4, 7));
+    await run(400);
+    expect(status()).toBe('ĐẾN LƯỢT BẠN');
+
+    // Simulate Blue closing and reopening the page at root /
+    cleanup();
+    history.replaceState(null, '', '/');
+
+    // Reopen App at root: Start Screen -> CHƠI ONLINE -> lobby -> re-enter room code
+    render(<App />);
+    expect(screen.getByTestId('start-screen')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('play-online'));
+    const lobbyRejoin = screen.getByTestId('online-lobby');
+    fireEvent.change(within(lobbyRejoin).getByTestId('nickname-input'), { target: { value: 'Lan' } });
+    fireEvent.change(within(lobbyRejoin).getByTestId('room-input'), { target: { value: roomId } });
+    fireEvent.click(within(lobbyRejoin).getByTestId('join-room'));
+    await run(60);
+
+    // Rejoined smoothly into the game, no ROOM_FULL error
+    expect(screen.queryByTestId('online-problem')).toBeNull();
+    expect(screen.queryByTestId('online-lobby')).toBeNull();
+    // Game is restored with the previous move intact: it is still Blue's turn
+    expect(status()).toBe('ĐẾN LƯỢT BẠN');
+
+    // Step 15-17: A third player tries to join using the room code
+    const thirdPlayer = new MultiplayerClient(remote.factory, { persist: false });
+    opponents.push(thirdPlayer);
+    let thirdPlayerError: string | null = null;
+    thirdPlayer.subscribe((e) => {
+      if (e.type === 'error') thirdPlayerError = e.code;
+    });
+    thirdPlayer.joinRoom(roomId, 'Minh');
+    await run(40);
+    expect(thirdPlayerError).toBe('ROOM_FULL');
+    expect(thirdPlayer.seat).toBeNull();
+  });
 });
 
 describe('offline mode is unchanged', () => {

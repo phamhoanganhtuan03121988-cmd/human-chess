@@ -31,9 +31,24 @@ export function webSocketTransport(url: string): TransportFactory {
       return t;
     }
     let closed = false;
+    const onUnload = () => {
+      try {
+        ws.close(1000, 'Page unloaded');
+      } catch {
+        /* ignore */
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', onUnload);
+      window.addEventListener('beforeunload', onUnload);
+    }
     const end = () => {
       if (closed) return;
       closed = true;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('pagehide', onUnload);
+        window.removeEventListener('beforeunload', onUnload);
+      }
       t.onClose?.();
     };
     ws.onopen = () => t.onOpen?.();

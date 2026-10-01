@@ -21,7 +21,7 @@ export const ROOM_ID_PATTERN = new RegExp(`^[${ROOM_ID_ALPHABET}]{${ROOM_ID_LENG
 
 export type ClientMessage =
   | { readonly type: 'CREATE_ROOM'; readonly nickname: string }
-  | { readonly type: 'JOIN_ROOM'; readonly roomId: string; readonly nickname: string }
+  | { readonly type: 'JOIN_ROOM'; readonly roomId: string; readonly nickname: string; readonly playerId?: string; readonly token?: string }
   | { readonly type: 'RECONNECT'; readonly roomId: string; readonly playerId: string; readonly token: string }
   | { readonly type: 'SYNC_REQUEST'; readonly roomId: string; readonly playerId: string }
   | {
@@ -102,7 +102,13 @@ export function parseClientMessage(value: unknown): ClientMessage | null {
       return typeof v.nickname === 'string' && v.nickname.length <= 64 ? { type: 'CREATE_ROOM', nickname: v.nickname } : null;
     case 'JOIN_ROOM':
       return id('roomId') && typeof v.nickname === 'string' && v.nickname.length <= 64
-        ? { type: 'JOIN_ROOM', roomId: v.roomId as string, nickname: v.nickname }
+        ? {
+            type: 'JOIN_ROOM',
+            roomId: v.roomId as string,
+            nickname: v.nickname,
+            ...(typeof v.playerId === 'string' && id('playerId') ? { playerId: v.playerId } : {}),
+            ...(typeof v.token === 'string' && id('token') ? { token: v.token } : {}),
+          }
         : null;
     case 'RECONNECT':
       return id('roomId') && id('playerId') && id('token')

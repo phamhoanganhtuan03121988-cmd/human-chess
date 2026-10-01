@@ -1684,7 +1684,7 @@ img { -webkit-user-drag: none; }
   .app { --side-w: 0px !important; justify-content: flex-start; padding-top: 12px; }
   .game-layout { grid-auto-flow: row; width: 100%; justify-items: center; }
   .side-panel { width: min(100%, calc(100vw - 32px)); height: 180px; min-height: 0; }
-  .hud__away { display: none; }
+  .hud__away { display: none !important; }
 }
 /* Narrow screens: the replay controls wrap onto two centered rows. */
 @media (max-width: 560px) {
@@ -1961,9 +1961,13 @@ img { -webkit-user-drag: none; }
 .hud__online { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; }
 .hud__room { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; letter-spacing: 0.1em; opacity: 0.8; }
 .hud__opponent { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-.hud__away { color: #f2c14e; white-space: nowrap; }
+.hud__away { display: none; color: #f2c14e; white-space: nowrap; }
+.hud__away--reconnected { color: #4cc97a !important; }
+@media (min-width: 701px) {
+  .hud__away { display: inline; }
+}
 @media (max-width: 700px) {
-  .hud__room, .hud__opponent { display: none; }
+  .hud__room, .hud__opponent, .hud__away { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .waiting-room__spinner, .connection-badge--wait .connection-badge__dot { animation: none; }
@@ -1973,7 +1977,7 @@ img { -webkit-user-drag: none; }
   .toolbar { gap: 6px; }
   .status { padding: 3px 10px; gap: 6px; letter-spacing: 0.03em; font-size: 13px; }
   .hud__online { flex: none; gap: 0; }
-  .hud__away { display: none; }
+  .hud__away { display: none !important; }
   .toolbar__button--danger, .toolbar__button--accent { padding-left: 10px; padding-right: 10px; }
 }
 .field__input { width: 100%; min-width: 0; }
@@ -2054,12 +2058,12 @@ img { -webkit-user-drag: none; }
 
 @media (min-width: 701px) {
   /* On desktop: connection status stays in the HUD */
-  .connection-banner { display: none; }
+  .connection-banner { display: none !important; }
 }
 
 @media (max-height: 460px) {
   /* Short landscape: keep banner in toolbar, not below board */
-  .connection-banner { display: none; }
+  .connection-banner { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

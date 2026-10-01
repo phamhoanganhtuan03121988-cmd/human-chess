@@ -53,6 +53,9 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [problem, setProblem] = useState<OnlineProblem | null>(null);
   const [busy, setBusy] = useState(false);
+  const [room, setRoom] = useState<OnlineRoomState | null>(() => clientRef.current?.room ?? null);
+  const [connection, setConnection] = useState<ConnectionStatus>(() => clientRef.current?.status ?? 'idle');
+  const [seat, setSeat] = useState<SeatCredentials | null>(() => clientRef.current?.seat ?? null);
   const sentKey = useRef<string | null>(null);
 
   const handleEvent = useCallback(
@@ -64,6 +67,8 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
         case 'seated': {
           setBusy(false);
           setProblem(null);
+          setSeat(e.you);
+          setRoom(e.room);
           // Keep what is already on the board if it is the start of the server's sequence
           // and at most one move behind (that one is then played with its animation);
           // otherwise rebuild the position from the server's moves.
@@ -84,11 +89,21 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
           }
           break;
         }
+        case 'room':
+          setRoom(e.room);
+          break;
+        case 'playerLeft':
+          setRoom(e.room);
+          break;
+        case 'move':
+          setRoom(e.room);
+          break;
         case 'rejected':
           dispatch({ type: 'clearPending' });
           if (e.reason === 'DUPLICATE' || e.reason === 'OUT_OF_SEQUENCE') client.requestSync();
           break;
         case 'gameOver':
+          setRoom(e.room);
           // Mate / stalemate / general captured: the engine reaches the same result when the
           // final move is played. Surrender has no move, so it is applied here.
           if (e.reason === 'surrender') dispatch({ type: 'forfeit', winner: e.winner });
@@ -96,9 +111,14 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
         case 'error':
           setBusy(false);
           setProblem(e.code);
-          if (e.code === 'SESSION_INVALID') clearSession();
+          if (e.code === 'SESSION_INVALID') {
+            clearSession();
+            setSeat(null);
+            setRoom(null);
+          }
           break;
         case 'status':
+          setConnection(e.status);
           if (e.status === 'offline') {
             setBusy(false);
             setProblem('OFFLINE');
@@ -131,6 +151,9 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
     if (active) return;
     clientRef.current?.dispose();
     clientRef.current = null;
+    setSeat(null);
+    setRoom(null);
+    setConnection('idle');
   }, [active]);
   useEffect(() => () => clientRef.current?.dispose(), []);
 
@@ -163,9 +186,9 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
   }, [ui.pendingMove, ui.gameId, ply, c, dispatch]);
 
   return {
-    connection: c?.status ?? 'idle',
-    seat: c?.seat ?? null,
-    room: c?.room ?? null,
+    connection,
+    seat,
+    room,
     problem,
     busy,
     createRoom: (nickname) => {
@@ -180,6 +203,11 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
       if (!cl) return;
       setProblem(null);
       setBusy(true);
+      const savedSeat = loadSession();
+      if (savedSeat && savedSeat.roomId === roomId) {
+        cl.resume(savedSeat);
+        return;
+      }
       cl.joinRoom(roomId, nickname);
     },
     resume: (roomId) => {
@@ -197,6 +225,9 @@ export function useOnlineGame(ui: UiState, dispatch: Dispatch<UiAction>, active:
     leave: () => {
       clientRef.current?.leave();
       clearSession();
+      setSeat(null);
+      setRoom(null);
+      setConnection('idle');
       rerender();
     },
     clearProblem: () => setProblem(null),

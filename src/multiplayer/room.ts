@@ -132,7 +132,7 @@ export class RoomServer {
       case 'CREATE_ROOM':
         return this.createRoom(c, msg.nickname);
       case 'JOIN_ROOM':
-        return this.joinRoom(c, msg.roomId, msg.nickname);
+        return this.joinRoom(c, msg.roomId, msg.nickname, msg.playerId, msg.token);
       case 'RECONNECT':
         return this.reconnect(c, msg);
       case 'SYNC_REQUEST':
@@ -192,7 +192,7 @@ export class RoomServer {
     c.conn.send({ type: 'ROOM_JOINED', you: this.credentials(room, room.red), room: this.view(room), moves: [] });
   }
 
-  private joinRoom(c: ConnState, rawRoomId: string, rawNickname: string): void {
+  private joinRoom(c: ConnState, rawRoomId: string, rawNickname: string, playerId?: string, token?: string): void {
     const roomId = normalizeRoomId(rawRoomId);
     if (!roomId) return c.conn.send({ type: 'ERROR', code: 'INVALID_ROOM_ID' });
     const nickname = normalizeNickname(rawNickname);
@@ -202,6 +202,27 @@ export class RoomServer {
     if (room.status === 'finished' || room.status === 'closed') {
       return c.conn.send({ type: 'ERROR', code: 'ROOM_FINISHED', room: this.view(room) });
     }
+
+    // A returning player reclaims their seat if credentials match.
+    if (playerId && token) {
+      const existing = this.seatById(room, playerId);
+      if (existing && existing.token === token) {
+        if (existing.connId && existing.connId !== c.conn.id) {
+          const old = this.conns.get(existing.connId);
+          if (old) {
+            old.roomId = null;
+            old.seatId = null;
+          }
+        }
+        existing.connId = c.conn.id;
+        room.touchedAt = this.now();
+        this.bind(c, room, existing);
+        c.conn.send({ type: 'ROOM_JOINED', you: this.credentials(room, existing), room: this.view(room), moves: [...room.moves] });
+        this.broadcast(room, { type: 'ROOM_STATE', room: this.view(room) }, existing.side);
+        return;
+      }
+    }
+
     if (room.red && room.blue) return c.conn.send({ type: 'ERROR', code: 'ROOM_FULL', room: this.view(room) });
     // The creator is Red; the second player always gets the free seat (Blue).
     const side: Side = room.red ? 'blue' : 'red';

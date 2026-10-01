@@ -121,6 +121,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('pong', () => alive.set(ws, true));
   ws.on('message', (data, isBinary) => {
     if (isBinary) return;
+    alive.set(ws, true);
     rooms.receive(id, data.toString());
   });
   ws.on('close', () => rooms.disconnect(id));
@@ -137,7 +138,7 @@ setInterval(() => {
     alive.set(ws, false);
     ws.ping();
   }
-}, 30_000).unref();
+}, 5_000).unref();
 setInterval(() => rooms.sweep(), 60_000).unref();
 
 http.listen(PORT, HOST, () => {

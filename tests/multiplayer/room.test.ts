@@ -102,6 +102,33 @@ describe('room lifecycle', () => {
     expect(c.last()).toMatchObject({ type: 'ERROR', code: 'INVALID_NICKNAME' });
   });
 
+  it('a disconnected player can rejoin via JOIN_ROOM with valid credentials', () => {
+    const { a, red, blue } = startGame();
+    server.disconnect('B');
+    expect(server.getRoom(red.roomId)!.bluePlayer!.connected).toBe(false);
+
+    // Third player without credentials is rejected with ROOM_FULL
+    const c = conn(server, 'C');
+    c.send({ type: 'JOIN_ROOM', roomId: red.roomId, nickname: 'Minh' });
+    expect(c.last()).toMatchObject({ type: 'ERROR', code: 'ROOM_FULL' });
+
+    // Player with invalid token is rejected with ROOM_FULL
+    const imposter = conn(server, 'Imposter');
+    imposter.send({ type: 'JOIN_ROOM', roomId: red.roomId, nickname: 'Lan', playerId: blue.playerId, token: 'bad-token' });
+    expect(imposter.last()).toMatchObject({ type: 'ERROR', code: 'ROOM_FULL' });
+
+    // Legitimate player B rejoins via JOIN_ROOM with valid credentials
+    const b2 = conn(server, 'B2');
+    b2.send({ type: 'JOIN_ROOM', roomId: red.roomId, nickname: 'Lan', playerId: blue.playerId, token: blue.token });
+    const joined = b2.last() as Extract<ServerMessage, { type: 'ROOM_JOINED' }>;
+    expect(joined.type).toBe('ROOM_JOINED');
+    expect(joined.you.side).toBe('blue');
+    expect(joined.you.playerId).toBe(blue.playerId);
+    expect(server.getRoom(red.roomId)!.bluePlayer!.connected).toBe(true);
+    expect(a.last()).toMatchObject({ type: 'ROOM_STATE' });
+  });
+
+
   it('leaving a waiting room closes it; empty rooms are closed after the idle timeout', () => {
     const a = conn(server, 'A');
     a.send({ type: 'CREATE_ROOM', nickname: 'Tuấn' });

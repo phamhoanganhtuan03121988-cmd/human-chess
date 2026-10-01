@@ -177,9 +177,55 @@ export function Hud(props: HudProps) {
   );
 }
 
-/** Connection state, room code and opponent (with a warning while the opponent is away). */
+function useIsMobileView(): boolean {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    if (typeof window.matchMedia === 'function') {
+      return window.matchMedia('(max-width: 700px)').matches;
+    }
+    return window.innerWidth <= 700;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const update = () => {
+      if (typeof window.matchMedia === 'function') {
+        setIsMobile(window.matchMedia('(max-width: 700px)').matches);
+      } else {
+        setIsMobile(window.innerWidth <= 700);
+      }
+    };
+    if (typeof window.matchMedia === 'function') {
+      const mq = window.matchMedia('(max-width: 700px)');
+      mq.addEventListener?.('change', update);
+      return () => mq.removeEventListener?.('change', update);
+    }
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  return isMobile;
+}
+
+/** Connection state, room code and opponent (with a warning while the opponent is away on desktop). */
 function OnlineHudInfo({ online }: { online: OnlineHud }) {
   const away = online.opponent !== null && !online.opponent.connected && online.playing;
+  const isMobile = useIsMobileView();
+  const [reconnected, setReconnected] = useState(false);
+  const prevConnectedRef = useRef(online.opponent?.connected ?? true);
+
+  useEffect(() => {
+    const prev = prevConnectedRef.current;
+    const curr = online.opponent?.connected ?? true;
+    prevConnectedRef.current = curr;
+
+    if (!prev && curr && online.playing) {
+      setReconnected(true);
+      const timer = window.setTimeout(() => setReconnected(false), 2500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [online.opponent?.connected, online.playing]);
+
   return (
     <div className="hud__online" data-testid="online-hud">
       <ConnectionBadge status={online.connection} compact />
@@ -191,9 +237,14 @@ function OnlineHudInfo({ online }: { online: OnlineHud }) {
           vs {online.opponent.nickname}
         </span>
       )}
-      {away && (
+      {away && !isMobile && (
         <span className="hud__away" role="status" data-testid="opponent-away">
           Đối thủ mất kết nối…
+        </span>
+      )}
+      {!away && reconnected && !isMobile && (
+        <span className="hud__away hud__away--reconnected" role="status" data-testid="opponent-reconnected">
+          Đã kết nối lại
         </span>
       )}
     </div>

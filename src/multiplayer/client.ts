@@ -10,7 +10,7 @@
 import type { Move, Side } from '../engine/index.ts';
 import type { ErrorCode, RejectReason, ServerMessage } from './protocol.ts';
 import { decode, parseServerMessage } from './protocol.ts';
-import { clearSession, saveSession } from './session.ts';
+import { clearSession, loadSession, saveSession } from './session.ts';
 import type { Transport, TransportFactory } from './transport.ts';
 import type { EndReason, OnlineRoomState, SeatCredentials } from './types.ts';
 
@@ -79,8 +79,17 @@ export class MultiplayerClient {
     this.request({ type: 'CREATE_ROOM', nickname });
   }
 
-  joinRoom(roomId: string, nickname: string): void {
-    this.request({ type: 'JOIN_ROOM', roomId, nickname });
+  joinRoom(roomId: string, nickname: string, credentials?: { playerId: string; token: string }): void {
+    const saved = this.persist ? loadSession() : null;
+    const seat = credentials ?? (this.seat?.roomId === roomId ? this.seat : (saved?.roomId === roomId ? saved : null));
+    const token = seat?.token;
+    const playerId = seat?.playerId;
+    this.request({
+      type: 'JOIN_ROOM',
+      roomId,
+      nickname,
+      ...(playerId && token ? { playerId, token } : {}),
+    });
   }
 
   /** Rejoin a remembered seat (after a refresh). */
