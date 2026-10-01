@@ -1684,6 +1684,7 @@ img { -webkit-user-drag: none; }
   .app { --side-w: 0px !important; justify-content: flex-start; padding-top: 12px; }
   .game-layout { grid-auto-flow: row; width: 100%; justify-items: center; }
   .side-panel { width: min(100%, calc(100vw - 32px)); height: 180px; min-height: 0; }
+  .hud__away { display: none; }
 }
 /* Narrow screens: the replay controls wrap onto two centered rows. */
 @media (max-width: 560px) {
@@ -1972,6 +1973,7 @@ img { -webkit-user-drag: none; }
   .toolbar { gap: 6px; }
   .status { padding: 3px 10px; gap: 6px; letter-spacing: 0.03em; font-size: 13px; }
   .hud__online { flex: none; gap: 0; }
+  .hud__away { display: none; }
   .toolbar__button--danger, .toolbar__button--accent { padding-left: 10px; padding-right: 10px; }
 }
 .field__input { width: 100%; min-width: 0; }
@@ -1980,4 +1982,87 @@ img { -webkit-user-drag: none; }
   .waiting-room .modal, .online-lobby .modal { gap: 6px; padding: 14px 20px; }
   .waiting-room__code { font-size: 28px; }
   .waiting-room__link .field__input { min-height: 36px; }
+}
+
+/* Mobile portrait connection banner below the board */
+.game-board-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.connection-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  max-width: min(calc(100vw - 32px), 360px);
+  z-index: 10;
+  animation: banner-enter 200ms ease-out both;
+}
+
+@keyframes banner-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.connection-banner--wait,
+.connection-banner--bad {
+  background: rgba(120, 40, 20, 0.45);
+  border: 1px solid rgba(242, 193, 78, 0.7);
+  color: #f2c14e;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.connection-banner--ok {
+  background: rgba(30, 80, 50, 0.45);
+  border: 1px solid rgba(76, 201, 122, 0.7);
+  color: #4cc97a;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.connection-banner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.connection-banner--wait .connection-banner__dot {
+  background: #f2c14e;
+  box-shadow: 0 0 6px #f2c14e;
+  animation: status-dot 0.9s ease-in-out infinite;
+}
+
+.connection-banner--bad .connection-banner__dot {
+  background: #e0463a;
+  box-shadow: 0 0 6px #e0463a;
+}
+
+.connection-banner--ok .connection-banner__dot {
+  background: #4cc97a;
+  box-shadow: 0 0 6px #4cc97a;
+}
+
+@media (min-width: 701px) {
+  /* On desktop: connection status stays in the HUD */
+  .connection-banner { display: none; }
+}
+
+@media (max-height: 460px) {
+  /* Short landscape: keep banner in toolbar, not below board */
+  .connection-banner { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-banner { animation: none; }
+  .connection-banner--wait .connection-banner__dot { animation: none; }
 }

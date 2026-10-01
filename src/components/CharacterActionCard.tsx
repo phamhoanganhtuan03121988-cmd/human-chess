@@ -47,10 +47,12 @@ function measure(): Layout {
   if (panel && panel.width > 0 && panel.top < frame.bottom) {
     return { placement: 'panel', style: { top: panel.top, left: panel.left, width: panel.width, maxHeight: panel.height } };
   }
-  const below = window.innerHeight - frame.bottom - GAP;
+  const banner = document.querySelector('[data-testid="connection-banner"]')?.getBoundingClientRect();
+  const anchorBottom = banner && banner.height > 0 ? banner.bottom : frame.bottom;
+  const below = window.innerHeight - anchorBottom - GAP;
   return {
     placement: 'below',
-    style: { top: frame.bottom + GAP, left: frame.left, width: frame.width, maxHeight: Math.max(below, 96) },
+    style: { top: anchorBottom + GAP, left: frame.left, width: frame.width, maxHeight: Math.max(below, 96) },
   };
 }
 
@@ -60,13 +62,21 @@ function useCardLayout(key: string): Layout {
     const update = () => setLayout(measure());
     update();
     window.addEventListener('resize', update);
-    // The board resizes/moves when the move panel opens or closes.
+    // The board resizes/moves when the move panel opens/closes or connection banner appears.
     const frame = document.querySelector('[data-testid="board-frame"]');
-    const observer = typeof ResizeObserver !== 'undefined' && frame ? new ResizeObserver(update) : null;
+    const banner = document.querySelector('[data-testid="connection-banner"]');
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
     if (observer && frame) observer.observe(frame);
+    if (observer && banner) observer.observe(banner);
+    const appEl = document.querySelector('.app');
+    const mutationObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(update) : null;
+    if (mutationObserver && appEl) {
+      mutationObserver.observe(appEl, { childList: true, subtree: true });
+    }
     return () => {
       window.removeEventListener('resize', update);
       observer?.disconnect();
+      mutationObserver?.disconnect();
     };
   }, [key]);
   return layout;

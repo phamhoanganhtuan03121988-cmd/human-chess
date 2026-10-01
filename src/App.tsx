@@ -12,6 +12,7 @@ import { ReplayView } from './components/ReplayView.tsx';
 import { SidePanel } from './components/SidePanel.tsx';
 import { StartScreen } from './components/StartScreen.tsx';
 import { OnlineLobby } from './components/online/OnlineLobby.tsx';
+import { OnlineConnectionBanner } from './components/online/OnlineConnectionBanner.tsx';
 import { SurrenderDialog } from './components/online/SurrenderDialog.tsx';
 import { WaitingRoom } from './components/online/WaitingRoom.tsx';
 import type { GameMode } from './multiplayer/types.ts';
@@ -229,14 +230,24 @@ export function App({ initialScreen = 'start' }: AppProps) {
               online={onlineHud}
             />
             <div className="game-layout">
-              <GameBoard
-                ui={ui}
-                dispatch={dispatch}
-                debug={debug}
-                perspective={boardPerspective}
-                onNewGame={isOnline ? leaveOnline : () => dispatch({ type: 'newGame' })}
-                onReplay={ply > 0 ? () => setReplaying(true) : null}
-              />
+              <div className="game-board-area">
+                <GameBoard
+                  ui={ui}
+                  dispatch={dispatch}
+                  debug={debug}
+                  perspective={boardPerspective}
+                  onNewGame={isOnline ? leaveOnline : () => dispatch({ type: 'newGame' })}
+                  onReplay={ply > 0 ? () => setReplaying(true) : null}
+                />
+                {isOnline && seated && (
+                  <OnlineConnectionBanner
+                    connection={online.connection}
+                    opponentConnected={opponent?.connected ?? true}
+                    playing={online.room!.status === 'playing' && !finished}
+                    combat={ui.combat !== null}
+                  />
+                )}
+              </div>
               {historyOpen && <SidePanel history={ui.game.history} />}
             </div>
           </>
